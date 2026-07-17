@@ -1,0 +1,23 @@
+[
+  {
+    "id": "u1",
+    "name": "Irene Fidone",
+    "full_name": "Irene Fidone",
+    "role": "student",
+    "location_code": "CMU"
+  },
+  {
+    "id": "u2",
+    "name": "Marcus Alvarez",
+    "full_name": "Marcus Alvarez",
+    "role": "lab_manager",
+    "location_code": "CMU"
+  },
+  {
+    "id": "u3",
+    "name": "Priya Nair",
+    "full_name": "Priya Nair",
+    "role": "student",
+    "location_code": "CMU"
+  }
+]

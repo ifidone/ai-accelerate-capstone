@@ -1,0 +1,493 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>LabBot</title>
+  <style>
+    :root {
+      --bg: #fbf7f3;
+      --surface: rgba(255, 255, 255, 0.72);
+      --surface-solid: #ffffff;
+      --border: rgba(20, 20, 40, 0.08);
+      --text: #1a1524;
+      --text-muted: #6b6880;
+      --accent: #7c5cff;
+      --accent-grad: linear-gradient(135deg, #7c5cff 0%, #ff6ea8 100%);
+      --shadow-sm: 0 1px 2px rgba(20, 20, 40, 0.04), 0 1px 3px rgba(20, 20, 40, 0.06);
+      --shadow-lg: 0 24px 60px -24px rgba(80, 60, 180, 0.28);
+      --radius-lg: 24px;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", system-ui, sans-serif;
+      color: var(--text);
+      background: var(--bg);
+      position: relative;
+      overflow-x: hidden;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      padding: 2rem 1rem;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body::before, body::after {
+      content: "";
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(80px);
+      opacity: 0.55;
+      z-index: -1;
+      pointer-events: none;
+    }
+    body::before {
+      width: 480px; height: 480px;
+      background: radial-gradient(circle, #ffb4c8 0%, transparent 70%);
+      top: -140px; left: -120px;
+      animation: float1 14s ease-in-out infinite;
+    }
+    body::after {
+      width: 540px; height: 540px;
+      background: radial-gradient(circle, #b6a5ff 0%, transparent 70%);
+      bottom: -180px; right: -140px;
+      animation: float2 18s ease-in-out infinite;
+    }
+    @keyframes float1 {
+      0%, 100% { transform: translate(0,0); }
+      50%      { transform: translate(60px, 80px); }
+    }
+    @keyframes float2 {
+      0%, 100% { transform: translate(0,0); }
+      50%      { transform: translate(-70px, -60px); }
+    }
+
+    .shell {
+      width: 100%;
+      max-width: 760px;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 0.25rem;
+    }
+
+    .brand { display: flex; align-items: center; gap: 0.7rem; }
+    .brand .mark {
+      width: 36px; height: 36px;
+      border-radius: 12px;
+      background: var(--accent-grad);
+      box-shadow: 0 6px 20px -6px rgba(124, 92, 255, 0.55);
+      display: grid;
+      place-items: center;
+      color: white;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+    .brand h1 {
+      font-size: 1.05rem;
+      margin: 0;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+    .brand .tag {
+      display: block;
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .persona {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: var(--surface);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 0.35rem 0.4rem 0.35rem 0.85rem;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      box-shadow: var(--shadow-sm);
+    }
+    .persona select {
+      border: none;
+      background: white;
+      border-radius: 999px;
+      padding: 0.35rem 0.75rem;
+      font: inherit;
+      color: var(--text);
+      font-weight: 600;
+      outline: none;
+      cursor: pointer;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .card {
+      background: var(--surface);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-lg);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    #log {
+      padding: 1.25rem;
+      height: 60vh;
+      min-height: 420px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      scroll-behavior: smooth;
+    }
+    #log::-webkit-scrollbar { width: 8px; }
+    #log::-webkit-scrollbar-thumb {
+      background: rgba(20, 20, 40, 0.12);
+      border-radius: 8px;
+    }
+
+    .empty {
+      margin: auto;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.92rem;
+      max-width: 320px;
+      line-height: 1.5;
+    }
+    .empty strong {
+      display: block;
+      color: var(--text);
+      font-size: 1.05rem;
+      margin-bottom: 0.3rem;
+      font-weight: 700;
+    }
+
+    .row {
+      display: flex;
+      gap: 0.5rem;
+      align-items: flex-end;
+      animation: pop 260ms cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+    .row.user { justify-content: flex-end; }
+    @keyframes pop {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .avatar {
+      width: 30px; height: 30px; flex: 0 0 30px;
+      border-radius: 50%;
+      display: grid; place-items: center;
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: white;
+    }
+    .avatar.bot { background: var(--accent-grad); }
+
+    .bubble {
+      max-width: 78%;
+      padding: 0.7rem 0.95rem;
+      border-radius: 18px;
+      line-height: 1.5;
+      font-size: 0.95rem;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+    .bubble.bot {
+      background: var(--surface-solid);
+      border: 1px solid var(--border);
+      border-bottom-left-radius: 6px;
+      box-shadow: var(--shadow-sm);
+    }
+    .bubble.user {
+      background: var(--accent-grad);
+      color: white;
+      border-bottom-right-radius: 6px;
+      box-shadow: 0 8px 20px -10px rgba(124, 92, 255, 0.6);
+    }
+
+    details {
+      margin-top: 0.5rem;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      border-top: 1px dashed var(--border);
+      padding-top: 0.5rem;
+    }
+    details summary {
+      cursor: pointer;
+      user-select: none;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      font-size: 0.68rem;
+    }
+    details pre {
+      margin: 0.4rem 0 0;
+      font-family: "SF Mono", "JetBrains Mono", ui-monospace, monospace;
+      font-size: 0.75rem;
+      white-space: pre-wrap;
+      background: rgba(20, 20, 40, 0.04);
+      padding: 0.5rem 0.65rem;
+      border-radius: 10px;
+    }
+
+    .typing {
+      display: inline-flex;
+      gap: 4px;
+      padding: 0.35rem 0.2rem;
+    }
+    .typing span {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--text-muted);
+      animation: blink 1.2s infinite ease-in-out;
+    }
+    .typing span:nth-child(2) { animation-delay: 0.15s; }
+    .typing span:nth-child(3) { animation-delay: 0.3s; }
+    @keyframes blink {
+      0%, 80%, 100% { opacity: 0.25; transform: translateY(0); }
+      40%           { opacity: 1;    transform: translateY(-2px); }
+    }
+
+    .composer {
+      border-top: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.6);
+      padding: 0.75rem;
+    }
+    form {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 0.3rem 0.3rem 0.3rem 1.1rem;
+      transition: border-color 140ms, box-shadow 140ms;
+    }
+    form:focus-within {
+      border-color: rgba(124, 92, 255, 0.5);
+      box-shadow: 0 0 0 4px rgba(124, 92, 255, 0.12);
+    }
+    #input {
+      flex: 1;
+      border: none;
+      outline: none;
+      font: inherit;
+      font-size: 0.95rem;
+      padding: 0.55rem 0;
+      background: transparent;
+      color: var(--text);
+    }
+    #input::placeholder { color: var(--text-muted); }
+    button {
+      border: none;
+      background: var(--accent-grad);
+      color: white;
+      width: 38px; height: 38px;
+      border-radius: 50%;
+      display: grid; place-items: center;
+      cursor: pointer;
+      transition: transform 120ms ease, box-shadow 120ms;
+      box-shadow: 0 6px 16px -6px rgba(124, 92, 255, 0.55);
+    }
+    button:hover  { transform: translateY(-1px) scale(1.03); }
+    button:active { transform: scale(0.96); }
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+    button svg { width: 16px; height: 16px; }
+
+    .hint {
+      text-align: center;
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      letter-spacing: 0.02em;
+    }
+
+    @media (max-width: 560px) {
+      body { padding: 1rem 0.75rem; }
+      header { flex-direction: column; align-items: stretch; gap: 0.75rem; }
+      .persona { align-self: flex-start; }
+      #log { height: 62vh; }
+      .bubble { max-width: 85%; font-size: 0.92rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header>
+      <div class="brand">
+        <div class="mark">L</div>
+        <div>
+          <h1>LabBot</h1>
+          <span class="tag">Lab equipment, checked out and tracked.</span>
+        </div>
+      </div>
+      <div class="persona">
+        <span>Acting as</span>
+        <select id="user" aria-label="Acting as user"></select>
+      </div>
+    </header>
+
+    <div class="card">
+      <div id="log" role="log" aria-live="polite">
+        <div class="empty">
+          <strong>Hey there.</strong>
+          The chat works — say hi. Availability checks, checkouts, and
+          returns come online as you build them (see coursework.md).
+        </div>
+      </div>
+      <div class="composer">
+        <form id="form">
+          <input id="input" placeholder="Ask LabBot about equipment…" autocomplete="off" />
+          <button type="submit" aria-label="Send">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M5 12h14"/>
+              <path d="M13 6l6 6-6 6"/>
+            </svg>
+          </button>
+        </form>
+      </div>
+    </div>
+    <div class="hint">Press Enter to send</div>
+  </div>
+
+  <script>
+    const log = document.getElementById("log");
+    const input = document.getElementById("input");
+    const userSel = document.getElementById("user");
+    const form = document.getElementById("form");
+    const sendBtn = form.querySelector("button");
+
+    function initials(name) {
+      return name.split(/\s+/).map(p => p[0]).join("").slice(0, 2).toUpperCase();
+    }
+
+    function userAvatarStyle() {
+      const v = userSel.value || "u";
+      const hue = (Array.from(v).reduce((a, c) => a + c.charCodeAt(0), 0) * 37) % 360;
+      return `background: linear-gradient(135deg, hsl(${hue} 75% 62%), hsl(${(hue + 40) % 360} 70% 55%));`;
+    }
+
+    function clearEmpty() {
+      const e = log.querySelector(".empty");
+      if (e) e.remove();
+    }
+
+    function add(role, text, extra) {
+      clearEmpty();
+      const row = document.createElement("div");
+      row.className = "row " + role;
+
+      const avatar = document.createElement("div");
+      avatar.className = "avatar " + role;
+      if (role === "bot") {
+        avatar.textContent = "L";
+      } else {
+        const opt = userSel.selectedOptions[0];
+        avatar.textContent = opt ? initials(opt.textContent.split(" (")[0]) : "U";
+        avatar.style.cssText = userAvatarStyle();
+      }
+
+      const bubble = document.createElement("div");
+      bubble.className = "bubble " + role;
+      bubble.textContent = text;
+
+      if (extra) {
+        const det = document.createElement("details");
+        const sum = document.createElement("summary");
+        sum.textContent = "Details";
+        const pre = document.createElement("pre");
+        pre.textContent = extra;
+        det.append(sum, pre);
+        bubble.appendChild(det);
+      }
+
+      if (role === "user") {
+        row.append(bubble, avatar);
+      } else {
+        row.append(avatar, bubble);
+      }
+      log.appendChild(row);
+      log.scrollTop = log.scrollHeight;
+      return { row, bubble };
+    }
+
+    function showTyping() {
+      clearEmpty();
+      const row = document.createElement("div");
+      row.className = "row bot";
+      row.innerHTML = `
+        <div class="avatar bot">L</div>
+        <div class="bubble bot">
+          <div class="typing"><span></span><span></span><span></span></div>
+        </div>`;
+      log.appendChild(row);
+      log.scrollTop = log.scrollHeight;
+      return row;
+    }
+
+    async function loadUsers() {
+      const r = await fetch("/api/users");
+      const users = await r.json();
+      for (const u of users) {
+        const opt = document.createElement("option");
+        opt.value = u.id;
+        opt.textContent = `${u.full_name} (${u.location_code})`;
+        userSel.appendChild(opt);
+      }
+    }
+
+    async function send(msg) {
+      add("user", msg);
+      sendBtn.disabled = true;
+      const typingRow = showTyping();
+      try {
+        const r = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-User-Id": userSel.value },
+          body: JSON.stringify({ message: msg }),
+        });
+        if (!r.ok) throw new Error(await r.text());
+        const data = await r.json();
+        typingRow.remove();
+        add("bot", data.reply);
+      } catch (e) {
+        typingRow.remove();
+        add("bot", "Error: " + e.message);
+      } finally {
+        sendBtn.disabled = false;
+        input.focus();
+      }
+    }
+
+    form.addEventListener("submit", e => {
+      e.preventDefault();
+      const v = input.value.trim();
+      if (!v) return;
+      input.value = "";
+      send(v);
+    });
+
+    loadUsers();
+  </script>
+</body>
+</html>

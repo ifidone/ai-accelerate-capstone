@@ -1,0 +1,10 @@
+fastapi
+uvicorn[standard]
+pydantic
+python-dotenv
+openai
+
+# Add more as you build — at minimum you'll likely need:
+# langgraph          — agent orchestration
+# chromadb           — local vector store for RAG
+# tiktoken           — token counting (useful for chunking)
