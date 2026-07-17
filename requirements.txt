@@ -3,6 +3,7 @@ uvicorn[standard]
 pydantic
 python-dotenv
 openai
+chromadb
 
 # Add more as you build — at minimum you'll likely need:
 # langgraph          — agent orchestration

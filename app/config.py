@@ -12,7 +12,8 @@ load_dotenv()
 
 ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = ROOT / "data"
-DOCS_DIR = ROOT / "docs"  # your policy / knowledge documents live here
+DOCS_DIR = ROOT / "docs" / "policies" # your policy / knowledge documents live here
+CHROMA_DIR = Path(__file__).parent.parent / ".chroma"
 
 AZURE_ENDPOINT = os.getenv("AZURE_OPENAI_ENDPOINT")
 AZURE_API_KEY = os.getenv("AZURE_OPENAI_API_KEY")
