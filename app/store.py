@@ -218,6 +218,7 @@ def request_checkout(user_id: str, item_id: str, days: int) -> dict:
         "status": "active",
         "approved_by": None,
         "notes": "",
+        "calendar_event_id": None,  # set later by calendar_client.create_due_date_event, if it succeeds
     }
 
     checkouts = load_checkouts()
@@ -231,10 +232,24 @@ def request_checkout(user_id: str, item_id: str, days: int) -> dict:
     return {"ok": True, "checkout": checkout, "item_name": record["name"], "days": requested_days}
 
 
+def set_calendar_event_id(checkout_id: str, event_id: str | None) -> None:
+    """Persist the Google Calendar event id created for a checkout, so a
+    later return can delete the right event. Called by app/graph.py after
+    calendar_client.create_due_date_event succeeds — never by store.py
+    itself, which knows nothing about Google Calendar."""
+    checkouts = load_checkouts()
+    for c in checkouts:
+        if c["checkout_id"] == checkout_id:
+            c["calendar_event_id"] = event_id
+    save_checkouts(checkouts)
+
+
 def report_return(user_id: str, item_id: str) -> dict:
     checkout = find_active_checkout(user_id, item_id)
     if checkout is None:
         return {"ok": False, "reason": "I can't find an active checkout for that item under your account."}
+
+    calendar_event_id = checkout.get("calendar_event_id")
 
     checkouts = load_checkouts()
     for c in checkouts:
@@ -250,7 +265,7 @@ def report_return(user_id: str, item_id: str) -> dict:
             r["checked_out_by"] = None
     save_records(records)
 
-    return {"ok": True, "item_id": item_id}
+    return {"ok": True, "item_id": item_id, "calendar_event_id": calendar_event_id}
 
 
 def time_remaining(user_id: str, item_id: str | None) -> dict:
@@ -310,3 +325,46 @@ def approve_or_deny(checkout_id: str, decision: str, manager_id: str) -> dict:
             save_checkouts(checkouts)
             return {"ok": True, "checkout_id": checkout_id, "decision": decision}
     return {"ok": False, "reason": f"No checkout found with id {checkout_id}."}
+
+def report_all_returns(user_id: str) -> dict:
+    returnable_statuses = ("active", "overdue")
+
+    active = [
+        c for c in load_checkouts()
+        if c["student_id"] == user_id and c["status"] in returnable_statuses
+    ]
+
+    if not active:
+        return {
+            "ok": False,
+            "reason": "You don't have any active checked-out items to return.",
+        }
+
+    item_ids = {c["item_id"] for c in active}
+    returned_on = date.today().isoformat()
+
+    checkouts = load_checkouts()
+    for checkout in checkouts:
+        if checkout["checkout_id"] in {c["checkout_id"] for c in active}:
+            checkout["status"] = "returned"
+            checkout["return_date"] = returned_on
+    save_checkouts(checkouts)
+
+    records = load_records()
+    for record in records:
+        if record["item_id"] in item_ids:
+            record["status"] = "available"
+            record["checked_out_by"] = None
+    save_records(records)
+
+    return {
+        "ok": True,
+        "returned": [
+            {
+                "checkout_id": c["checkout_id"],
+                "item_id": c["item_id"],
+                "calendar_event_id": c.get("calendar_event_id"),
+            }
+            for c in active
+        ],
+    }

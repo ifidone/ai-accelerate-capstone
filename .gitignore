@@ -6,3 +6,5 @@ __pycache__/
 .chroma/
 chroma_db/
 *.db
+google_credentials.json
+.google_token.json

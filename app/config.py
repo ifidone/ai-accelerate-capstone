@@ -22,10 +22,13 @@ AZURE_CHAT_DEPLOYMENT = os.getenv("AZURE_OPENAI_CHAT_DEPLOYMENT", "gpt-4o-mini")
 AZURE_EMBED_DEPLOYMENT = os.getenv("AZURE_OPENAI_EMBED_DEPLOYMENT", "text-embedding-3-small")
 
 # ---------------------------------------------------------------------------
+# Google Calendar (Part 3 — live API integration)
+# ---------------------------------------------------------------------------
+GOOGLE_CREDENTIALS_PATH = ROOT / "google_credentials.json"
+GOOGLE_TOKEN_PATH = ROOT / ".google_token.json"
+GOOGLE_CALENDAR_ID = os.getenv("GOOGLE_CALENDAR_ID", "primary")
+
+# ---------------------------------------------------------------------------
 # RAG corpus trust boundary
 # ---------------------------------------------------------------------------
-# Allowlist of filenames that are allowed to be indexed from DOCS_DIR.
-# Defaults to "whatever real .md files exist in DOCS_DIR right now" —
-# snapshotted at import time, so a file dropped into docs/policies/ after
-# the server has already started will NOT be picked up without a restart.
 TRUSTED_POLICY_SOURCES = {p.name for p in DOCS_DIR.glob("*.md")} if DOCS_DIR.exists() else set()

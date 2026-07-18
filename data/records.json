@@ -27,8 +27,8 @@
     "item_id": "scope-02",
     "name": "Tektronix TBS1052B Oscilloscope",
     "category": "oscilloscope",
-    "status": "checked_out",
-    "checked_out_by": "u1",
+    "status": "available",
+    "checked_out_by": null,
     "checkout_limit_days": 2
   },
   {

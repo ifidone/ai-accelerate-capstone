@@ -5,6 +5,9 @@ python-dotenv
 openai
 chromadb
 langgraph
+google-auth 
+google-auth-oauthlib 
+google-api-python-client
 
 # Add more as you build — at minimum you'll likely need:
 # langgraph          — agent orchestration

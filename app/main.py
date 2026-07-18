@@ -17,6 +17,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 from . import graph, rag, store
+from . import conversation_store, graph, rag, store
 
 app = FastAPI(title="LabBot")
 
@@ -34,14 +35,28 @@ def users():
     """The users / personas available in the UI switcher."""
     return list(store.load_users().values())
 
-
 @app.post("/api/chat")
-def chat(req: ChatRequest, x_user_id: str = Header(default="", alias="X-User-Id")):
+def chat(
+    req: ChatRequest,
+    x_user_id: str = Header(default="", alias="X-User-Id"),
+    x_conversation_id: str = Header(default="", alias="X-Conversation-Id"),
+):
     user = store.get_user(x_user_id)
-    result = graph.run(req.message, user)
-    # `intent` and `result` are returned alongside `reply` so you can see them
-    # in the UI's "Details" disclosure (index.html already renders `extra`
-    # if you pass it — wire it up if you want visibility while debugging).
+
+    # Keep the identifier bounded so arbitrary headers cannot create
+    # unbounded keys in the in-memory conversation store.
+    conversation_id = x_conversation_id[:100] or "default"
+
+    history = conversation_store.get_history(x_user_id, conversation_id)
+    result = graph.run(req.message, user, history)
+
+    conversation_store.append_turn(
+        user_id=x_user_id,
+        conversation_id=conversation_id,
+        user_message=req.message,
+        assistant_reply=result["reply"],
+    )
+
     return result
 
 

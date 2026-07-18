@@ -377,6 +377,18 @@
     const form = document.getElementById("form");
     const sendBtn = form.querySelector("button");
 
+    function conversationId() {
+      const key = `labbot-conversation-${userSel.value || "anonymous"}`;
+      let id = sessionStorage.getItem(key);
+
+      if (!id) {
+        id = crypto.randomUUID();
+        sessionStorage.setItem(key, id);
+      }
+
+      return id;
+    }
+
     function initials(name) {
       return name.split(/\s+/).map(p => p[0]).join("").slice(0, 2).toUpperCase();
     }
@@ -463,7 +475,11 @@
       try {
         const r = await fetch("/api/chat", {
           method: "POST",
-          headers: { "Content-Type": "application/json", "X-User-Id": userSel.value },
+          headers: {
+            "Content-Type": "application/json",
+            "X-User-Id": userSel.value,
+            "X-Conversation-Id": conversationId(),
+          },
           body: JSON.stringify({ message: msg }),
         });
         if (!r.ok) throw new Error(await r.text());
