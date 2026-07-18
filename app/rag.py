@@ -21,9 +21,42 @@ from pathlib import Path
 import chromadb
 from chromadb.utils import embedding_functions
 
-from . import config
+from . import config, llm
 
-_EMBED_FN = embedding_functions.DefaultEmbeddingFunction()  # local, no API key needed
+
+class _AzureEmbeddingFunction(embedding_functions.EmbeddingFunction):
+    """Wraps the Azure OpenAI embeddings endpoint so ChromaDB can call it
+    like any other embedding function. Uses config.AZURE_EMBED_DEPLOYMENT —
+    the same client/credentials as chat, just a different deployment.
+
+    Falls back to a local embedding model if the Azure call fails (e.g. no
+    embeddings deployment provisioned on this resource) — prints a warning
+    once rather than blocking indexing entirely.
+    """
+
+    def __init__(self):
+        self._fallback = None  # lazily created only if we ever need it
+        self._warned = False
+
+    def __call__(self, input):
+        texts = list(input)
+        try:
+            resp = llm.client().embeddings.create(model=config.AZURE_EMBED_DEPLOYMENT, input=texts)
+            return [d.embedding for d in resp.data]
+        except Exception as e:
+            if not self._warned:
+                print(
+                    f"[rag] WARNING: Azure embeddings call failed ({e}); "
+                    f"falling back to a local embedding model. Fix "
+                    f"AZURE_OPENAI_EMBED_DEPLOYMENT in .env to use Azure instead."
+                )
+                self._warned = True
+            if self._fallback is None:
+                self._fallback = embedding_functions.DefaultEmbeddingFunction()
+            return self._fallback(texts)
+
+
+_EMBED_FN = _AzureEmbeddingFunction()
 _COLLECTION_NAME = "labbot_policies"
 
 
@@ -114,9 +147,32 @@ def structure_aware_chunk(text: str, source: str, max_size: int = 800) -> list[C
 # Indexing
 # ---------------------------------------------------------------------------
 def _load_docs() -> list[tuple[str, str]]:
-    """Returns [(filename, text), ...] for every .md file in docs/policies/."""
+    """Returns [(filename, text), ...] for every trusted .md file in
+    docs/policies/.
+
+    This is the real defense against document-borne prompt injection: don't
+    index anything you didn't author. `config.TRUSTED_POLICY_SOURCES`, if
+    set, is an explicit allowlist of filenames — anything else in the
+    directory is skipped and printed as a warning, so a file that shouldn't
+    be there is visible instead of silently trusted. Relying on the LLM to
+    resist instructions embedded in already-indexed content is NOT
+    sufficient on its own (see scripts/injection_test.py --force) — the
+    corpus itself has to be the trust boundary.
+    """
     docs_dir = config.DOCS_DIR
-    return [(p.name, p.read_text()) for p in sorted(docs_dir.glob("*.md"))]
+    all_files = sorted(docs_dir.glob("*.md"))
+
+    allowlist = getattr(config, "TRUSTED_POLICY_SOURCES", None)
+    if allowlist is None:
+        return [(p.name, p.read_text()) for p in all_files]
+
+    trusted, skipped = [], []
+    for p in all_files:
+        (trusted if p.name in allowlist else skipped).append(p)
+    if skipped:
+        print(f"[rag] WARNING: skipping untrusted file(s) not in TRUSTED_POLICY_SOURCES: "
+              f"{[p.name for p in skipped]}")
+    return [(p.name, p.read_text()) for p in trusted]
 
 
 def build_index(strategy: str = "structured", persist_dir: Path | None = None) -> chromadb.Collection:

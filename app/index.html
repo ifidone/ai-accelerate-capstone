@@ -469,7 +469,10 @@
         if (!r.ok) throw new Error(await r.text());
         const data = await r.json();
         typingRow.remove();
-        add("bot", data.reply);
+        const debug = data.intent
+          ? `intent: ${data.intent}\n\n${JSON.stringify(data.result, null, 2)}`
+          : null;
+        add("bot", data.reply, debug);
       } catch (e) {
         typingRow.remove();
         add("bot", "Error: " + e.message);

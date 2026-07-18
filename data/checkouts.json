@@ -1,0 +1,35 @@
+[
+  {
+    "checkout_id": "c-demo0001",
+    "item_id": "scope-02",
+    "student_id": "u1",
+    "checkout_date": "2026-07-15",
+    "due_date": "2026-07-19",
+    "return_date": null,
+    "status": "active",
+    "approved_by": "u2",
+    "notes": ""
+  },
+  {
+    "checkout_id": "c-demo0002",
+    "item_id": "printer-01",
+    "student_id": "u3",
+    "checkout_date": "2026-07-05",
+    "due_date": "2026-07-10",
+    "return_date": null,
+    "status": "active",
+    "approved_by": "u2",
+    "notes": ""
+  },
+  {
+    "checkout_id": "c-84a3b5c1",
+    "item_id": "esp32-01",
+    "student_id": "u1",
+    "checkout_date": "2026-07-18",
+    "due_date": "2026-07-21",
+    "return_date": "2026-07-18",
+    "status": "returned",
+    "approved_by": null,
+    "notes": ""
+  }
+]

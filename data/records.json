@@ -35,8 +35,8 @@
     "item_id": "printer-01",
     "name": "ESC/POS Thermal Printer",
     "category": "peripheral",
-    "status": "available",
-    "checked_out_by": null,
+    "status": "checked_out",
+    "checked_out_by": "u3",
     "checkout_limit_days": 5
   },
   {

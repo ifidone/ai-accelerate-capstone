@@ -12,7 +12,7 @@ load_dotenv()
 
 ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = ROOT / "data"
-DOCS_DIR = ROOT / "docs" / "policies" # your policy / knowledge documents live here
+DOCS_DIR = ROOT / "docs" / "policies"  # your policy / knowledge documents live here
 CHROMA_DIR = Path(__file__).parent.parent / ".chroma"
 
 AZURE_ENDPOINT = os.getenv("AZURE_OPENAI_ENDPOINT")
@@ -20,3 +20,12 @@ AZURE_API_KEY = os.getenv("AZURE_OPENAI_API_KEY")
 AZURE_API_VERSION = os.getenv("AZURE_OPENAI_API_VERSION", "2024-08-01-preview")
 AZURE_CHAT_DEPLOYMENT = os.getenv("AZURE_OPENAI_CHAT_DEPLOYMENT", "gpt-4o-mini")
 AZURE_EMBED_DEPLOYMENT = os.getenv("AZURE_OPENAI_EMBED_DEPLOYMENT", "text-embedding-3-small")
+
+# ---------------------------------------------------------------------------
+# RAG corpus trust boundary
+# ---------------------------------------------------------------------------
+# Allowlist of filenames that are allowed to be indexed from DOCS_DIR.
+# Defaults to "whatever real .md files exist in DOCS_DIR right now" —
+# snapshotted at import time, so a file dropped into docs/policies/ after
+# the server has already started will NOT be picked up without a restart.
+TRUSTED_POLICY_SOURCES = {p.name for p in DOCS_DIR.glob("*.md")} if DOCS_DIR.exists() else set()

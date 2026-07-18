@@ -4,6 +4,7 @@ pydantic
 python-dotenv
 openai
 chromadb
+langgraph
 
 # Add more as you build — at minimum you'll likely need:
 # langgraph          — agent orchestration
