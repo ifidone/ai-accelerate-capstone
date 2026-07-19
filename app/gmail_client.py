@@ -182,3 +182,28 @@ def send_due_date_reminder(user: dict | None, item_name: str, due_date: str, che
         f"— LabBot"
     )
     return _send(to, subject, body)
+
+def send_overdue_nudge(
+    user: dict | None,
+    item_name: str,
+    due_date: str,
+    checkout_id: str,
+) -> dict:
+    """Send an immediate manager-triggered overdue reminder."""
+    to = _student_email(user)
+    name = user["name"] if user else "Student"
+
+    subject = f"LabBot overdue notice: {item_name} was due {due_date}"
+
+    body = (
+        f"Hi {name},\n\n"
+        f"This is a LabBot reminder that the following equipment is overdue:\n\n"
+        f"  Item:        {item_name}\n"
+        f"  Checkout ID: {checkout_id}\n"
+        f"  Due date:    {due_date}\n\n"
+        f"Please return the item as soon as possible, or contact the lab "
+        f"manager if there is an issue.\n\n"
+        f"— LabBot"
+    )
+
+    return _send(to, subject, body)

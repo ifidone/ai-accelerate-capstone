@@ -3,9 +3,10 @@
     "item_id": "esp32-01",
     "name": "ESP32 Dev Kit",
     "category": "microcontroller",
-    "status": "checked_out",
-    "checked_out_by": "u1",
-    "checkout_limit_days": 3
+    "status": "available",
+    "checked_out_by": null,
+    "checkout_limit_days": 3,
+    "manager_note": "[2026-07-19 by u2] Status set to available."
   },
   {
     "item_id": "esp32-02",
@@ -19,8 +20,8 @@
     "item_id": "scope-01",
     "name": "Tektronix TBS1052B Oscilloscope",
     "category": "oscilloscope",
-    "status": "checked_out",
-    "checked_out_by": "u1",
+    "status": "available",
+    "checked_out_by": null,
     "checkout_limit_days": 2
   },
   {
@@ -43,8 +44,8 @@
     "item_id": "sensor-kit-01",
     "name": "Environmental Sensor Kit (temp/humidity/IMU)",
     "category": "sensor_kit",
-    "status": "available",
-    "checked_out_by": null,
+    "status": "checked_out",
+    "checked_out_by": "u1",
     "checkout_limit_days": 5
   }
 ]

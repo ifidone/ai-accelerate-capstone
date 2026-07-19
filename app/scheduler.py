@@ -29,10 +29,15 @@ log = logging.getLogger(__name__)
 _scheduler: BackgroundScheduler | None = None
 
 
-def _send_reminders() -> None:
+def _send_reminders(target_due_date: str | None = None) -> None:
     """Called once per day. Finds every active checkout due tomorrow and
     sends a reminder email to the student."""
-    tomorrow = (date.today() + timedelta(days=1)).isoformat()
+    # Updates active records that have passed their due date to overdue.
+    store.overdue_items()
+
+    tomorrow = target_due_date or (
+        date.today() + timedelta(days=1)
+    ).isoformat()
     checkouts = store.load_checkouts()
     users = store.load_users()
     records = {r["item_id"]: r for r in store.load_records()}
@@ -96,10 +101,13 @@ def stop() -> None:
         _scheduler = None
 
 
-def run_now() -> None:
-    """Trigger the reminder job immediately — useful for testing without
-    waiting for 8 AM. Run from a Python shell or a script:
-        from app import scheduler; scheduler.run_now()
+def run_now(target_due_date: str | None = None) -> None:
+    """Run reminders immediately.
+
+    With no argument, runs the normal daily behavior and targets equipment
+    due tomorrow. Supply a date for testing, for example:
+
+        scheduler.run_now("2026-07-20")
     """
     log.info("Manual reminder run triggered")
-    _send_reminders()
+    _send_reminders(target_due_date=target_due_date)

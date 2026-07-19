@@ -17,7 +17,7 @@
     "checkout_date": "2026-07-05",
     "due_date": "2026-07-10",
     "return_date": null,
-    "status": "active",
+    "status": "overdue",
     "approved_by": "u2",
     "notes": ""
   },
@@ -134,8 +134,8 @@
     "student_id": "u1",
     "checkout_date": "2026-07-19",
     "due_date": "2026-07-22",
-    "return_date": null,
-    "status": "active",
+    "return_date": "2026-07-19",
+    "status": "returned",
     "approved_by": null,
     "notes": "",
     "calendar_event_id": null
@@ -158,10 +158,33 @@
     "student_id": "u1",
     "checkout_date": "2026-07-19",
     "due_date": "2026-07-20",
-    "return_date": null,
-    "status": "active",
+    "return_date": "2026-07-19",
+    "status": "returned",
     "approved_by": null,
     "notes": "",
     "calendar_event_id": "qljvkktlnlcc4k4ar8n99v4ck4"
+  },
+  {
+    "checkout_id": "c-a9c2acc5",
+    "item_id": "sensor-kit-01",
+    "student_id": "u1",
+    "checkout_date": "2026-07-19",
+    "due_date": "2026-07-21",
+    "return_date": null,
+    "requested_days": 2,
+    "status": "active",
+    "approved_by": "u2",
+    "notes": "[Damage report d-5c7db80f on 2026-07-19] The sensor kit is 5\u00b0C off.",
+    "damage_reports": [
+      {
+        "report_id": "d-5c7db80f",
+        "reported_on": "2026-07-19",
+        "reported_by": "u1",
+        "description": "The sensor kit is 5\u00b0C off.",
+        "status": "open",
+        "manager_note": ""
+      }
+    ],
+    "calendar_event_id": "gdbtnr3qcptm3rudprl6d9vtlo"
   }
 ]
