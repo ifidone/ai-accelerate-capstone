@@ -3,8 +3,8 @@
     "item_id": "esp32-01",
     "name": "ESP32 Dev Kit",
     "category": "microcontroller",
-    "status": "available",
-    "checked_out_by": null,
+    "status": "checked_out",
+    "checked_out_by": "u1",
     "checkout_limit_days": 3
   },
   {
@@ -19,8 +19,8 @@
     "item_id": "scope-01",
     "name": "Tektronix TBS1052B Oscilloscope",
     "category": "oscilloscope",
-    "status": "available",
-    "checked_out_by": null,
+    "status": "checked_out",
+    "checked_out_by": "u1",
     "checkout_limit_days": 2
   },
   {

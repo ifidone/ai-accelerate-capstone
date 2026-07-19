@@ -55,5 +55,113 @@
     "approved_by": null,
     "notes": "",
     "calendar_event_id": "19d7tgtdvfqcpsluna4hlnsjg8"
+  },
+  {
+    "checkout_id": "c-16d2df02",
+    "item_id": "esp32-01",
+    "student_id": "u1",
+    "checkout_date": "2026-07-19",
+    "due_date": "2026-07-22",
+    "return_date": "2026-07-19",
+    "status": "returned",
+    "approved_by": null,
+    "notes": "",
+    "calendar_event_id": null
+  },
+  {
+    "checkout_id": "c-667a0855",
+    "item_id": "esp32-02",
+    "student_id": "u1",
+    "checkout_date": "2026-07-19",
+    "due_date": "2026-07-22",
+    "return_date": "2026-07-19",
+    "status": "returned",
+    "approved_by": null,
+    "notes": "",
+    "calendar_event_id": "ghbspjc56vjd77dqjmd0chmfbs"
+  },
+  {
+    "checkout_id": "c-1c5caff5",
+    "item_id": "esp32-01",
+    "student_id": "u1",
+    "checkout_date": "2026-07-19",
+    "due_date": "2026-07-22",
+    "return_date": "2026-07-19",
+    "status": "returned",
+    "approved_by": null,
+    "notes": "",
+    "calendar_event_id": null
+  },
+  {
+    "checkout_id": "c-a6c8e42a",
+    "item_id": "esp32-02",
+    "student_id": "u1",
+    "checkout_date": "2026-07-19",
+    "due_date": "2026-07-22",
+    "return_date": "2026-07-19",
+    "status": "returned",
+    "approved_by": null,
+    "notes": "",
+    "calendar_event_id": null
+  },
+  {
+    "checkout_id": "c-81660e6f",
+    "item_id": "esp32-01",
+    "student_id": "u1",
+    "checkout_date": "2026-07-19",
+    "due_date": "2026-07-22",
+    "return_date": "2026-07-19",
+    "status": "returned",
+    "approved_by": null,
+    "notes": "",
+    "calendar_event_id": null
+  },
+  {
+    "checkout_id": "c-ee931524",
+    "item_id": "scope-01",
+    "student_id": "u1",
+    "checkout_date": "2026-07-19",
+    "due_date": "2026-07-21",
+    "return_date": "2026-07-19",
+    "status": "returned",
+    "approved_by": null,
+    "notes": "",
+    "calendar_event_id": null
+  },
+  {
+    "checkout_id": "c-97ecb6ee",
+    "item_id": "esp32-01",
+    "student_id": "u1",
+    "checkout_date": "2026-07-19",
+    "due_date": "2026-07-22",
+    "return_date": null,
+    "status": "active",
+    "approved_by": null,
+    "notes": "",
+    "calendar_event_id": null
+  },
+  {
+    "checkout_id": "c-d1766e90",
+    "item_id": "scope-01",
+    "student_id": "u1",
+    "checkout_date": "2026-07-19",
+    "due_date": "2026-07-21",
+    "return_date": "2026-07-19",
+    "status": "returned",
+    "approved_by": null,
+    "notes": "",
+    "calendar_event_id": "4tugqveh4p2a2uqmen8v663150"
+  },
+  {
+    "checkout_id": "c-d993bdf2",
+    "item_id": "scope-01",
+    "student_id": "u1",
+    "checkout_date": "2026-07-19",
+    "due_date": "2026-07-20",
+    "return_date": null,
+    "status": "active",
+    "approved_by": null,
+    "notes": "",
+    "calendar_event_id": "qljvkktlnlcc4k4ar8n99v4ck4"
   }
 ]

@@ -8,3 +8,5 @@ chroma_db/
 *.db
 google_credentials.json
 .google_token.json
+coursework.md
+notes.md
