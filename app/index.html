@@ -108,29 +108,26 @@
     }
 
     .persona {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      background: var(--surface);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      border: 1px solid var(--border);
-      border-radius: 999px;
-      padding: 0.35rem 0.4rem 0.35rem 0.85rem;
-      font-size: 0.85rem;
-      color: var(--text-muted);
-      box-shadow: var(--shadow-sm);
+      gap: 0.65rem;
     }
-    .persona select {
-      border: none;
-      background: white;
+
+    #signed-in-as {
+      max-width: 270px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    #logout {
+      width: auto;
+      height: auto;
+      padding: 0.4rem 0.75rem;
       border-radius: 999px;
-      padding: 0.35rem 0.75rem;
-      font: inherit;
+      background: white;
       color: var(--text);
-      font-weight: 600;
-      outline: none;
-      cursor: pointer;
+      font: inherit;
+      font-size: 0.78rem;
+      font-weight: 650;
       box-shadow: var(--shadow-sm);
     }
 
@@ -342,8 +339,8 @@
         </div>
       </div>
       <div class="persona">
-        <span>Acting as</span>
-        <select id="user" aria-label="Acting as user"></select>
+        <span id="signed-in-as">Checking sign-in…</span>
+        <button id="logout" type="button">Log out</button>
       </div>
     </header>
 
@@ -373,140 +370,243 @@
   <script>
     const log = document.getElementById("log");
     const input = document.getElementById("input");
-    const userSel = document.getElementById("user");
     const form = document.getElementById("form");
     const sendBtn = form.querySelector("button");
-
-    function conversationId() {
-      const key = `labbot-conversation-${userSel.value || "anonymous"}`;
-      let id = sessionStorage.getItem(key);
-
-      if (!id) {
-        id = crypto.randomUUID();
-        sessionStorage.setItem(key, id);
-      }
-
-      return id;
-    }
-
+    const signedInAs = document.getElementById("signed-in-as");
+    const logoutBtn = document.getElementById("logout");
+  
+    let currentUser = null;
+  
     function initials(name) {
-      return name.split(/\s+/).map(p => p[0]).join("").slice(0, 2).toUpperCase();
+      return String(name || "User")
+        .split(/\s+/)
+        .filter(Boolean)
+        .map(part => part[0])
+        .join("")
+        .slice(0, 2)
+        .toUpperCase();
     }
-
+  
     function userAvatarStyle() {
-      const v = userSel.value || "u";
-      const hue = (Array.from(v).reduce((a, c) => a + c.charCodeAt(0), 0) * 37) % 360;
-      return `background: linear-gradient(135deg, hsl(${hue} 75% 62%), hsl(${(hue + 40) % 360} 70% 55%));`;
+      const seed = currentUser?.id || currentUser?.email || "user";
+      const hue = (
+        Array.from(seed).reduce(
+          (total, character) => total + character.charCodeAt(0),
+          0,
+        ) * 37
+      ) % 360;
+  
+      return `
+        background: linear-gradient(
+          135deg,
+          hsl(${hue} 75% 62%),
+          hsl(${(hue + 40) % 360} 70% 55%)
+        );
+      `;
     }
-
+  
     function clearEmpty() {
-      const e = log.querySelector(".empty");
-      if (e) e.remove();
+      const empty = log.querySelector(".empty");
+      if (empty) empty.remove();
     }
-
-    function add(role, text, extra) {
+  
+    function add(role, text, extra = null) {
       clearEmpty();
+  
       const row = document.createElement("div");
-      row.className = "row " + role;
-
+      row.className = `row ${role}`;
+  
       const avatar = document.createElement("div");
-      avatar.className = "avatar " + role;
+      avatar.className = `avatar ${role}`;
+  
       if (role === "bot") {
         avatar.textContent = "L";
       } else {
-        const opt = userSel.selectedOptions[0];
-        avatar.textContent = opt ? initials(opt.textContent.split(" (")[0]) : "U";
+        avatar.textContent = initials(currentUser?.name);
         avatar.style.cssText = userAvatarStyle();
       }
-
+  
       const bubble = document.createElement("div");
-      bubble.className = "bubble " + role;
+      bubble.className = `bubble ${role}`;
+  
+      // textContent prevents HTML/script injection from model or history text.
       bubble.textContent = text;
-
+  
       if (extra) {
-        const det = document.createElement("details");
-        const sum = document.createElement("summary");
-        sum.textContent = "Details";
+        const details = document.createElement("details");
+        const summary = document.createElement("summary");
         const pre = document.createElement("pre");
+  
+        summary.textContent = "Details";
         pre.textContent = extra;
-        det.append(sum, pre);
-        bubble.appendChild(det);
+  
+        details.append(summary, pre);
+        bubble.appendChild(details);
       }
-
+  
       if (role === "user") {
         row.append(bubble, avatar);
       } else {
         row.append(avatar, bubble);
       }
+  
       log.appendChild(row);
       log.scrollTop = log.scrollHeight;
-      return { row, bubble };
     }
-
+  
     function showTyping() {
       clearEmpty();
+  
       const row = document.createElement("div");
       row.className = "row bot";
       row.innerHTML = `
         <div class="avatar bot">L</div>
         <div class="bubble bot">
-          <div class="typing"><span></span><span></span><span></span></div>
+          <div class="typing">
+            <span></span><span></span><span></span>
+          </div>
         </div>`;
+  
       log.appendChild(row);
       log.scrollTop = log.scrollHeight;
+  
       return row;
     }
-
-    async function loadUsers() {
-      const r = await fetch("/api/users");
-      const users = await r.json();
-      for (const u of users) {
-        const opt = document.createElement("option");
-        opt.value = u.id;
-        opt.textContent = `${u.full_name} (${u.location_code})`;
-        userSel.appendChild(opt);
+  
+    function setChatEnabled(enabled) {
+      input.disabled = !enabled;
+      sendBtn.disabled = !enabled;
+    }
+  
+    async function readError(response) {
+      const text = await response.text();
+  
+      try {
+        const parsed = JSON.parse(text);
+        return parsed.detail || text;
+      } catch {
+        return text || `Request failed with status ${response.status}.`;
       }
     }
-
-    async function send(msg) {
-      add("user", msg);
-      sendBtn.disabled = true;
+  
+    async function loadSession() {
+      const response = await fetch("/api/me", {
+        credentials: "same-origin",
+      });
+  
+      if (response.status === 401) {
+        window.location.assign("/api/auth/login");
+        return false;
+      }
+  
+      if (!response.ok) {
+        throw new Error(await readError(response));
+      }
+  
+      currentUser = await response.json();
+  
+      const displayName = currentUser.name || currentUser.email;
+      const role = currentUser.role === "lab_manager"
+        ? "Lab Manager"
+        : "Student";
+  
+      signedInAs.textContent = `${displayName} (${role})`;
+  
+      return true;
+    }
+  
+    async function send(message) {
+      add("user", message);
+      setChatEnabled(false);
+  
       const typingRow = showTyping();
+  
       try {
-        const r = await fetch("/api/chat", {
+        const response = await fetch("/api/chat", {
           method: "POST",
+          credentials: "same-origin",
           headers: {
             "Content-Type": "application/json",
-            "X-User-Id": userSel.value,
-            "X-Conversation-Id": conversationId(),
           },
-          body: JSON.stringify({ message: msg }),
+          body: JSON.stringify({ message }),
         });
-        if (!r.ok) throw new Error(await r.text());
-        const data = await r.json();
+  
+        if (response.status === 401) {
+          window.location.assign("/api/auth/login");
+          return;
+        }
+  
+        if (!response.ok) {
+          throw new Error(await readError(response));
+        }
+  
+        const data = await response.json();
+  
         typingRow.remove();
+  
         const debug = data.intent
           ? `intent: ${data.intent}\n\n${JSON.stringify(data.result, null, 2)}`
           : null;
-        add("bot", data.reply, debug);
-      } catch (e) {
+  
+        add("bot", data.reply || "I could not generate a reply.", debug);
+      } catch (error) {
         typingRow.remove();
-        add("bot", "Error: " + e.message);
+        add(
+          "bot",
+          `Error: ${error instanceof Error ? error.message : String(error)}`,
+        );
       } finally {
-        sendBtn.disabled = false;
+        setChatEnabled(true);
         input.focus();
       }
     }
-
-    form.addEventListener("submit", e => {
-      e.preventDefault();
-      const v = input.value.trim();
-      if (!v) return;
+  
+    form.addEventListener("submit", event => {
+      event.preventDefault();
+  
+      const message = input.value.trim();
+  
+      if (!message || input.disabled) return;
+  
       input.value = "";
-      send(v);
+      send(message);
     });
-
-    loadUsers();
+  
+    logoutBtn.addEventListener("click", async () => {
+      logoutBtn.disabled = true;
+  
+      try {
+        await fetch("/api/auth/logout", {
+          method: "POST",
+          credentials: "same-origin",
+        });
+      } finally {
+        window.location.assign("/");
+      }
+    });
+  
+    async function initialize() {
+      setChatEnabled(false);
+  
+      try {
+        const authenticated = await loadSession();
+  
+        if (!authenticated) return;
+  
+        setChatEnabled(true);
+        input.focus();
+      } catch (error) {
+        signedInAs.textContent = "Sign-in unavailable";
+        add(
+          "bot",
+          `Could not initialize LabBot: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        );
+      }
+    }
+  
+    initialize();
   </script>
 </body>
 </html>

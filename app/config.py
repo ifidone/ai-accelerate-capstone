@@ -1,4 +1,6 @@
-"""Configuration — environment variables and paths."""
+"""LabBot configuration — paths, OAuth clients, integrations, and secrets."""
+
+from __future__ import annotations
 
 import os
 from pathlib import Path
@@ -7,84 +9,150 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# ---------------------------------------------------------------------------
+# Project paths
+# ---------------------------------------------------------------------------
 ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = ROOT / "data"
 DOCS_DIR = ROOT / "docs" / "policies"
 CHROMA_DIR = ROOT / ".chroma"
+
+DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 # ---------------------------------------------------------------------------
 # Azure OpenAI
 # ---------------------------------------------------------------------------
 AZURE_ENDPOINT = os.getenv("AZURE_OPENAI_ENDPOINT")
 AZURE_API_KEY = os.getenv("AZURE_OPENAI_API_KEY")
-AZURE_API_VERSION = os.getenv("AZURE_OPENAI_API_VERSION", "2024-08-01-preview")
-AZURE_CHAT_DEPLOYMENT = os.getenv("AZURE_OPENAI_CHAT_DEPLOYMENT", "gpt-4o-mini")
-AZURE_EMBED_DEPLOYMENT = os.getenv("AZURE_OPENAI_EMBED_DEPLOYMENT", "text-embedding-3-small")
+AZURE_API_VERSION = os.getenv(
+    "AZURE_OPENAI_API_VERSION",
+    "2024-08-01-preview",
+)
+AZURE_CHAT_DEPLOYMENT = os.getenv(
+    "AZURE_OPENAI_CHAT_DEPLOYMENT",
+    "gpt-4o-mini",
+)
+AZURE_EMBED_DEPLOYMENT = os.getenv(
+    "AZURE_OPENAI_EMBED_DEPLOYMENT",
+    "text-embedding-3-small",
+)
 
 # ---------------------------------------------------------------------------
-# Google OAuth — shared across login + calendar
+# Google OAuth — browser login / LabBot personas
 # ---------------------------------------------------------------------------
-# Download an OAuth client (Desktop app) from Google Cloud Console.
-# The same client_secrets file covers both user login and calendar access
-# because we request all scopes in one consent flow.
-GOOGLE_CREDENTIALS_PATH = ROOT / "google_credentials.json"
-GOOGLE_TOKEN_PATH = ROOT / ".google_token.json"     # service-level / debug token
+# This must be a Google OAuth client of type "Web application".
+#
+# It is separate from google_credentials.json, which is the Desktop OAuth
+# client used by the LabBot Calendar/Gmail automation account.
+GOOGLE_WEB_CREDENTIALS_PATH = ROOT / os.getenv(
+    "GOOGLE_WEB_CREDENTIALS",
+    "google_web_credentials.json",
+)
 
-GOOGLE_SCOPES = [
+# Must exactly match the Authorized redirect URI configured for the Web
+# OAuth client in Google Cloud Console.
+GOOGLE_OAUTH_REDIRECT_URI = os.getenv(
+    "GOOGLE_OAUTH_REDIRECT_URI",
+    "http://localhost:8000/api/auth/google/callback",
+)
+
+# These scopes identify the person signing into LabBot. Calendar and Gmail
+# permissions belong to the separate bot/debug OAuth identity below.
+GOOGLE_LOGIN_SCOPES = [
     "openid",
     "https://www.googleapis.com/auth/userinfo.email",
     "https://www.googleapis.com/auth/userinfo.profile",
+]
+
+# ---------------------------------------------------------------------------
+# Google OAuth — LabBot debug Calendar and Gmail automation account
+# ---------------------------------------------------------------------------
+# This must be a Google OAuth client of type "Desktop app".
+#
+# It is used by:
+#   python -m scripts.connect_bot_calendar
+#
+# The script authorizes the account that creates Calendar events and sends
+# LabBot Gmail messages.
+GOOGLE_CREDENTIALS_PATH = ROOT / os.getenv(
+    "GOOGLE_BOT_CREDENTIALS",
+    "google_credentials.json",
+)
+
+# Keep this aligned with scripts/connect_bot_calendar.py,
+# app/calendar_client.py, and app/gmail_client.py.
+GOOGLE_TOKEN_PATH = ROOT / os.getenv(
+    "GOOGLE_BOT_TOKEN_PATH",
+    ".google_token.json",
+)
+
+# These scopes are for the LabBot automation account only.
+GOOGLE_SCOPES = [
     "https://www.googleapis.com/auth/calendar.events",
     "https://www.googleapis.com/auth/gmail.send",
 ]
 
-# The redirect URI registered in Google Cloud Console → OAuth client → Authorized redirect URIs.
-# For local dev: http://localhost:8000/auth/callback
-# Update this when you deploy.
-GOOGLE_REDIRECT_URI = os.getenv("GOOGLE_REDIRECT_URI", "http://localhost:8000/auth/callback")
-
-# Extracted from google_credentials.json at import time (needed to verify id_tokens).
-_creds_path = GOOGLE_CREDENTIALS_PATH
-GOOGLE_CLIENT_ID: str = ""
-if _creds_path.exists():
-    import json as _json
-    _raw = _json.loads(_creds_path.read_text())
-    _web_or_installed = _raw.get("web") or _raw.get("installed") or {}
-    GOOGLE_CLIENT_ID = _web_or_installed.get("client_id", "")
-
 # ---------------------------------------------------------------------------
-# Google Calendar
+# Google Calendar and Gmail
 # ---------------------------------------------------------------------------
-# The debug/admin calendar that always receives a copy of every event.
-# Set this to your own Google Calendar ID (usually your Gmail address for
-# the primary calendar, or a specific calendar's ID from Calendar settings).
-GOOGLE_DEBUG_CALENDAR_ID = os.getenv("GOOGLE_DEBUG_CALENDAR_ID", "primary")
+# "primary" writes events to the primary calendar of whichever account was
+# authorized by scripts/connect_bot_calendar.py.
+GOOGLE_DEBUG_CALENDAR_ID = os.getenv(
+    "GOOGLE_DEBUG_CALENDAR_ID",
+    "primary",
+)
+
+# Compatibility name expected by the current calendar_client.py.
 GOOGLE_CALENDAR_ID = GOOGLE_DEBUG_CALENDAR_ID
 
-# ---------------------------------------------------------------------------
-# Gmail
-# ---------------------------------------------------------------------------
-# BCC address that receives a copy of every outbound email — lets you see
-# all student emails during development without logging into student accounts.
-GMAIL_DEBUG_ADDRESS = os.getenv("GMAIL_DEBUG_ADDRESS", "irene.fidone10@gmail.com")
-
-# ---------------------------------------------------------------------------
-# Sessions
-# ---------------------------------------------------------------------------
-# Generate a strong random secret: python -c "import secrets; print(secrets.token_hex(32))"
-# Add it to your .env as SESSION_SECRET=...
-SESSION_SECRET = os.getenv("SESSION_SECRET", "change-me-in-production")
-
-# ---------------------------------------------------------------------------
-# Role mapping — emails that get lab_manager role on login
-# ---------------------------------------------------------------------------
-LAB_MANAGER_EMAILS: set[str] = set(
-    e.strip() for e in os.getenv("LAB_MANAGER_EMAILS", "irene.fidone10@gmail.com").split(",") if e.strip()
+# Receives a debug copy of all outgoing confirmation/reminder emails.
+GMAIL_DEBUG_ADDRESS = os.getenv(
+    "GMAIL_DEBUG_ADDRESS",
+    "irene.fidone10@gmail.com",
 )
+
+# ---------------------------------------------------------------------------
+# Browser sessions and local OAuth development
+# ---------------------------------------------------------------------------
+SESSION_SECRET = os.getenv("SESSION_SECRET", "")
+
+COOKIE_HTTPS_ONLY = (
+    os.getenv("COOKIE_HTTPS_ONLY", "false").strip().lower()
+    in {"1", "true", "yes"}
+)
+
+# OAuthlib normally requires HTTPS. Enable only for localhost development.
+# Do not set this to true in a deployed environment.
+OAUTHLIB_INSECURE_TRANSPORT = (
+    os.getenv("OAUTHLIB_INSECURE_TRANSPORT", "false").strip().lower()
+    in {"1", "true", "yes"}
+)
+
+OAUTHLIB_RELAX_TOKEN_SCOPE = (
+    os.getenv("OAUTHLIB_RELAX_TOKEN_SCOPE", "false").strip().lower()
+    in {"1", "true", "yes"}
+)
+
+# ---------------------------------------------------------------------------
+# Optional email-to-role mapping
+# ---------------------------------------------------------------------------
+# Your current Google-login implementation should map authenticated emails
+# against data/users.json. This allowlist is available if you later choose
+# to derive manager role directly from environment configuration.
+LAB_MANAGER_EMAILS = {
+    email.strip().lower()
+    for email in os.getenv(
+        "LAB_MANAGER_EMAILS",
+        "ifidone@andrew.cmu.edu",
+    ).split(",")
+    if email.strip()
+}
 
 # ---------------------------------------------------------------------------
 # RAG corpus trust boundary
 # ---------------------------------------------------------------------------
-# Auto-snapshot at import time — files added after server start won't be
-# indexed until restart. See app/rag.py::_load_docs().
-TRUSTED_POLICY_SOURCES = {p.name for p in DOCS_DIR.glob("*.md")} if DOCS_DIR.exists() else set()
+TRUSTED_POLICY_SOURCES = (
+    {path.name for path in DOCS_DIR.glob("*.md")}
+    if DOCS_DIR.exists()
+    else set()
+)

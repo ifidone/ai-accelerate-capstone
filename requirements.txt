@@ -9,6 +9,8 @@ google-auth
 google-auth-oauthlib 
 google-api-python-client
 apscheduler
+mcp[cli]
+itsdangerous
 
 # Add more as you build — at minimum you'll likely need:
 # langgraph          — agent orchestration
