@@ -14,7 +14,7 @@ from googleapiclient.discovery import build
 from pydantic import BaseModel
 from starlette.middleware.sessions import SessionMiddleware
 
-from . import auth, config, conversation_store, graph, rag, scheduler
+from . import auth, config, conversation_store, graph, rag, scheduler, user_google_tokens
 
 log = logging.getLogger(__name__)
 
@@ -164,6 +164,10 @@ def google_callback(request: Request):
     )
 
     user = auth.resolve_google_user(profile)
+
+    # This token belongs to the signed-in LabBot user and enables events in
+    # their own primary Google Calendar.
+    user_google_tokens.save(user["id"], flow.credentials)
 
     request.session["user"] = user
     request.session["conversation_id"] = secrets.token_urlsafe(20)

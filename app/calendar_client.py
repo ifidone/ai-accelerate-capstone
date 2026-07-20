@@ -1,135 +1,404 @@
-"""Google Calendar integration — the live external API for Part 3.
+"""Google Calendar integration for LabBot.
 
-Authentication vs authorization, concretely:
-  - Authentication: OAuth 2.0 installed-app flow. The FIRST time this runs,
-    it opens a browser for you to sign into a Google account and consent.
-    After that, a refresh token is cached in config.GOOGLE_TOKEN_PATH and
-    used silently — no repeated logins. This proves "LabBot is allowed to
-    act on behalf of this one Google account" (the service identity, e.g.
-    the lab manager's account, however you set it up).
-  - Authorization: SCOPES below is deliberately narrow —
-    'calendar.events' only, not full calendar access. LabBot can create and
-    delete events it made; it cannot read your other calendars, invite
-    guests to unrelated meetings, or see anything beyond events. That's the
-    principle of least privilege applied to a real OAuth scope, not just a
-    design essay.
+A successful approved checkout creates two independent due-date events:
 
-Every public function here returns the same {"ok": bool, ...} shape used
-throughout app/store.py. That's the boundary the coursework is pointing at:
-app/graph.py's action nodes don't need to know or care whether a given
-result dict came from a JSON file or a live REST call — same shape, same
-handling, same respond_node. That's what makes this swap (relatively)
-painless.
+1. Student calendar
+   Uses the signed-in student's saved Google OAuth token and writes to that
+   person's primary Google Calendar.
+
+2. LabBot debug calendar
+   Uses the separately authorized bot/debug account token and writes to the
+   configured debug calendar.
+
+Calendar failures never roll back a successful equipment checkout or return.
 """
 
 from __future__ import annotations
 
-from . import config
+from datetime import date, timedelta
 
-SCOPES = ["https://www.googleapis.com/auth/calendar.events"]
+from . import config, user_google_tokens
 
-_service_cache = None
+BOT_CALENDAR_SCOPES = [
+    "https://www.googleapis.com/auth/calendar.events",
+]
+
+_bot_service_cache = None
 
 
-def _get_credentials():
+def _event_body(item_name: str, due_date: str, checkout_id: str) -> dict:
+    """Create a Google all-day event body.
+
+    Google all-day event end dates are exclusive, so an event due July 21
+    starts July 21 and ends July 22.
+    """
+    due = date.fromisoformat(due_date)
+    end_date = (due + timedelta(days=1)).isoformat()
+
+    return {
+        "summary": f"Lab equipment due: {item_name}",
+        "description": f"LabBot checkout {checkout_id}",
+        "start": {"date": due_date},
+        "end": {"date": end_date},
+        "reminders": {"useDefault": True},
+    }
+
+
+def _describe_http_error(error, operation: str) -> str:
+    status = getattr(error.resp, "status", None)
+
+    if status == 401:
+        return "Google Calendar authentication expired and must be reauthorized."
+
+    if status == 403:
+        return "Google Calendar denied access or its quota was exceeded."
+
+    if status == 404:
+        if operation == "create":
+            return (
+                "The configured calendar could not be found or the authorized "
+                "account does not have access to it."
+            )
+
+        return "The calendar event was already removed or no longer exists."
+
+    return f"Google Calendar API error during {operation} (status {status})."
+
+
+def _build_service(credentials):
+    from googleapiclient.discovery import build
+
+    return build(
+        "calendar",
+        "v3",
+        credentials=credentials,
+        cache_discovery=False,
+    )
+
+
+def _get_bot_credentials():
     from google.auth.exceptions import RefreshError
     from google.auth.transport.requests import Request
     from google.oauth2.credentials import Credentials
-    from google_auth_oauthlib.flow import InstalledAppFlow
 
-    creds = None
-    if config.GOOGLE_TOKEN_PATH.exists():
-        creds = Credentials.from_authorized_user_file(str(config.GOOGLE_TOKEN_PATH), SCOPES)
+    if not config.GOOGLE_TOKEN_PATH.exists():
+        raise RuntimeError(
+            "The LabBot debug Calendar token does not exist. "
+            "Run the bot-calendar authorization script."
+        )
 
-    if not creds or not creds.valid:
-        if creds and creds.expired and creds.refresh_token:
-            try:
-                creds.refresh(Request())
-            except RefreshError:
-                creds = None
-        if not creds:
-            if not config.GOOGLE_CREDENTIALS_PATH.exists():
-                raise RuntimeError(
-                    f"Missing {config.GOOGLE_CREDENTIALS_PATH}. In Google Cloud "
-                    "Console, create an OAuth client (type: Desktop app), "
-                    "download the JSON, and save it at that path."
-                )
-            flow = InstalledAppFlow.from_client_secrets_file(str(config.GOOGLE_CREDENTIALS_PATH), SCOPES)
-            creds = flow.run_local_server(port=0)  # opens a browser for consent
-        config.GOOGLE_TOKEN_PATH.write_text(creds.to_json())
+    credentials = Credentials.from_authorized_user_file(
+        str(config.GOOGLE_TOKEN_PATH),
+        BOT_CALENDAR_SCOPES,
+    )
 
-    return creds
+    if credentials.valid:
+        return credentials
 
+    if not credentials.expired or not credentials.refresh_token:
+        raise RuntimeError(
+            "The LabBot debug Calendar token is invalid. Reauthorize it."
+        )
 
-def _service():
-    global _service_cache
-    if _service_cache is None:
-        from googleapiclient.discovery import build
-        _service_cache = build("calendar", "v3", credentials=_get_credentials())
-    return _service_cache
+    try:
+        credentials.refresh(Request())
+    except RefreshError as exc:
+        raise RuntimeError(
+            "The LabBot debug Calendar token expired. Reauthorize it."
+        ) from exc
+
+    config.GOOGLE_TOKEN_PATH.write_text(credentials.to_json())
+    return credentials
 
 
-def _describe_http_error(e) -> str:
-    status = getattr(e.resp, "status", None)
-    if status == 401:
-        return "Calendar authentication expired — LabBot may need to be reauthorized."
-    if status == 403:
-        return "Calendar API rate limit or quota exceeded — try again shortly."
-    if status == 404:
-        return "That calendar event no longer exists."
-    return f"Calendar API error (status {status})."
+def _bot_service():
+    global _bot_service_cache
+
+    if _bot_service_cache is None:
+        _bot_service_cache = _build_service(_get_bot_credentials())
+
+    return _bot_service_cache
 
 
-def create_due_date_event(item_name: str, due_date: str, checkout_id: str) -> dict:
-    """Create an all-day event on the due date. NEVER raises — any failure
-    (auth, quota, network, timeout) comes back as {"ok": False, "reason":
-    ...} so a calendar outage can never take down a checkout that otherwise
-    succeeded in app/store.py. This is the "partial failure" requirement:
-    the write to your real system of record already happened; the calendar
-    sync is best-effort on top of it.
-    """
+def _student_service(student_user_id: str):
+    credentials = user_google_tokens.load(student_user_id)
+
+    if not credentials:
+        raise RuntimeError(
+            "The student's Google Calendar is not connected. "
+            "The student should sign in to LabBot again."
+        )
+
+    return _build_service(credentials)
+
+
+def _create_event(
+    service,
+    calendar_id: str,
+    item_name: str,
+    due_date: str,
+    checkout_id: str,
+) -> dict:
     try:
         from googleapiclient.errors import HttpError
 
-        event = {
-            "summary": f"Lab equipment due: {item_name}",
-            "description": f"LabBot checkout {checkout_id}",
-            "start": {"date": due_date},
-            "end": {"date": due_date},
-            "reminders": {"useDefault": True},
+        created = (
+            service.events()
+            .insert(
+                calendarId=calendar_id,
+                body=_event_body(item_name, due_date, checkout_id),
+            )
+            .execute()
+        )
+
+        return {
+            "ok": True,
+            "event_id": created["id"],
         }
-        created = _service().events().insert(calendarId=config.GOOGLE_CALENDAR_ID, body=event).execute()
-        return {"ok": True, "event_id": created["id"]}
-    except HttpError as e:
-        return {"ok": False, "reason": _describe_http_error(e)}
-    except RuntimeError as e:
-        # Raised by _get_credentials when there's no client secrets file yet.
-        return {"ok": False, "reason": str(e)}
-    except (ConnectionError, TimeoutError) as e:
-        return {"ok": False, "reason": f"Could not reach Google Calendar ({e})."}
-    except Exception as e:  # last-resort catch: calendar sync must never crash a checkout
-        return {"ok": False, "reason": f"Unexpected calendar error: {e}"}
+
+    except HttpError as error:
+        return {
+            "ok": False,
+            "reason": _describe_http_error(error, "create"),
+        }
+    except Exception as error:
+        return {
+            "ok": False,
+            "reason": f"Unexpected Calendar creation error: {error}",
+        }
+
+
+def _delete_event(
+    service,
+    calendar_id: str,
+    event_id: str | None,
+) -> dict:
+    if not event_id:
+        return {
+            "ok": True,
+            "note": "no event was recorded",
+        }
+
+    try:
+        from googleapiclient.errors import HttpError
+
+        (
+            service.events()
+            .delete(
+                calendarId=calendar_id,
+                eventId=event_id,
+            )
+            .execute()
+        )
+
+        return {"ok": True}
+
+    except HttpError as error:
+        status = getattr(error.resp, "status", None)
+
+        if status == 404:
+            return {
+                "ok": True,
+                "note": "event was already removed",
+            }
+
+        return {
+            "ok": False,
+            "reason": _describe_http_error(error, "delete"),
+        }
+    except Exception as error:
+        return {
+            "ok": False,
+            "reason": f"Unexpected Calendar deletion error: {error}",
+        }
+
+
+def create_checkout_events(
+    student_user_id: str,
+    item_name: str,
+    due_date: str,
+    checkout_id: str,
+) -> dict:
+    """Create the student and debug calendar events independently."""
+    targets = []
+
+    try:
+        result = _create_event(
+            service=_student_service(student_user_id),
+            calendar_id="primary",
+            item_name=item_name,
+            due_date=due_date,
+            checkout_id=checkout_id,
+        )
+        targets.append(
+            {
+                "target": "student calendar",
+                **result,
+            }
+        )
+    except RuntimeError as error:
+        targets.append(
+            {
+                "target": "student calendar",
+                "ok": False,
+                "reason": str(error),
+            }
+        )
+
+    try:
+        result = _create_event(
+            service=_bot_service(),
+            calendar_id=config.GOOGLE_DEBUG_CALENDAR_ID,
+            item_name=item_name,
+            due_date=due_date,
+            checkout_id=checkout_id,
+        )
+        targets.append(
+            {
+                "target": "LabBot debug calendar",
+                **result,
+            }
+        )
+    except RuntimeError as error:
+        targets.append(
+            {
+                "target": "LabBot debug calendar",
+                "ok": False,
+                "reason": str(error),
+            }
+        )
+
+    event_ids = {
+        "student_event_id": next(
+            (
+                target["event_id"]
+                for target in targets
+                if target["target"] == "student calendar"
+                and target.get("ok")
+            ),
+            None,
+        ),
+        "debug_event_id": next(
+            (
+                target["event_id"]
+                for target in targets
+                if target["target"] == "LabBot debug calendar"
+                and target.get("ok")
+            ),
+            None,
+        ),
+    }
+
+    failures = [
+        f"{target['target']}: {target['reason']}"
+        for target in targets
+        if not target.get("ok")
+    ]
+
+    return {
+        "ok": not failures,
+        "event_ids": event_ids,
+        "targets": targets,
+        "reason": "; ".join(failures) if failures else None,
+    }
+
+
+def delete_checkout_events(
+    student_user_id: str,
+    event_ids: dict | None,
+) -> dict:
+    """Delete student and debug events independently after a return."""
+    event_ids = event_ids or {}
+    targets = []
+
+    try:
+        result = _delete_event(
+            service=_student_service(student_user_id),
+            calendar_id="primary",
+            event_id=event_ids.get("student_event_id"),
+        )
+        targets.append(
+            {
+                "target": "student calendar",
+                **result,
+            }
+        )
+    except RuntimeError as error:
+        targets.append(
+            {
+                "target": "student calendar",
+                "ok": False,
+                "reason": str(error),
+            }
+        )
+
+    try:
+        result = _delete_event(
+            service=_bot_service(),
+            calendar_id=config.GOOGLE_DEBUG_CALENDAR_ID,
+            event_id=event_ids.get("debug_event_id"),
+        )
+        targets.append(
+            {
+                "target": "LabBot debug calendar",
+                **result,
+            }
+        )
+    except RuntimeError as error:
+        targets.append(
+            {
+                "target": "LabBot debug calendar",
+                "ok": False,
+                "reason": str(error),
+            }
+        )
+
+    failures = [
+        f"{target['target']}: {target['reason']}"
+        for target in targets
+        if not target.get("ok")
+    ]
+
+    return {
+        "ok": not failures,
+        "targets": targets,
+        "reason": "; ".join(failures) if failures else None,
+    }
+
+
+# Compatibility helpers for your existing MCP server.
+# They continue to operate only on the LabBot debug calendar.
+def create_due_date_event(
+    item_name: str,
+    due_date: str,
+    checkout_id: str,
+) -> dict:
+    """Create an event only in the LabBot debug calendar."""
+    try:
+        return _create_event(
+            service=_bot_service(),
+            calendar_id=config.GOOGLE_DEBUG_CALENDAR_ID,
+            item_name=item_name,
+            due_date=due_date,
+            checkout_id=checkout_id,
+        )
+    except RuntimeError as error:
+        return {
+            "ok": False,
+            "reason": str(error),
+        }
 
 
 def delete_event(event_id: str | None) -> dict:
-    """Delete a previously-created event. A missing event_id or an
-    already-gone event (404) both count as success — the end state (no
-    event) is what we wanted either way."""
-    if not event_id:
-        return {"ok": True, "note": "no calendar event was on file for this checkout"}
+    """Delete an event only from the LabBot debug calendar."""
     try:
-        from googleapiclient.errors import HttpError
-
-        _service().events().delete(calendarId=config.GOOGLE_CALENDAR_ID, eventId=event_id).execute()
-        return {"ok": True}
-    except HttpError as e:
-        status = getattr(e.resp, "status", None)
-        if status == 404:
-            return {"ok": True, "note": "event was already removed"}
-        return {"ok": False, "reason": _describe_http_error(e)}
-    except RuntimeError as e:
-        return {"ok": False, "reason": str(e)}
-    except (ConnectionError, TimeoutError) as e:
-        return {"ok": False, "reason": f"Could not reach Google Calendar ({e})."}
-    except Exception as e:
-        return {"ok": False, "reason": f"Unexpected calendar error: {e}"}
+        return _delete_event(
+            service=_bot_service(),
+            calendar_id=config.GOOGLE_DEBUG_CALENDAR_ID,
+            event_id=event_id,
+        )
+    except RuntimeError as error:
+        return {
+            "ok": False,
+            "reason": str(error),
+        }

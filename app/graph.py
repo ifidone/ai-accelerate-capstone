@@ -1,7 +1,7 @@
 """LabBot role-gated orchestration graph.
 
-The current UI selector supplies the acting user for demo purposes.
-Every manager-only action is still enforced in deterministic Python code.
+The authenticated user is supplied by main.py from the signed Google session.
+All manager-only actions are enforced in deterministic Python code.
 """
 
 from __future__ import annotations
@@ -37,6 +37,9 @@ class AgentState(TypedDict, total=False):
     reply: str
 
 
+# ---------------------------------------------------------------------------
+# Conversation and JSON extraction helpers
+# ---------------------------------------------------------------------------
 def _format_history(history: list[dict] | None, limit: int = 6) -> str:
     if not history:
         return "(no prior turns in this conversation)"
@@ -54,6 +57,7 @@ def _extract_json(
     message: str,
     history: list[dict] | None = None,
 ) -> dict:
+    """Ask the LLM to extract structured fields from a user message."""
     if history:
         system += (
             "\n\nCONVERSATION SO FAR is context only. Use it only to "
@@ -74,10 +78,16 @@ def _extract_json(
         return {}
 
 
+# ---------------------------------------------------------------------------
+# Intent routing
+# ---------------------------------------------------------------------------
 def classify_node(state: AgentState) -> AgentState:
     message = state["message"].lower().strip()
     user = state.get("user")
 
+    # Explicit manager wording routes deterministically. This prevents
+    # "show pending requests" from being misclassified as the manager's own
+    # personal-status request.
     manager_phrases = (
         "pending request",
         "pending checkout",
@@ -105,7 +115,7 @@ def classify_node(state: AgentState) -> AgentState:
     ):
         state["intent"] = "manager_action"
         return state
-    
+
     system = (
         "Classify the user's NEW message about a lab equipment checkout "
         "system into exactly one of these labels:\n"
@@ -139,6 +149,9 @@ def route_intent(state: AgentState) -> str:
     return state["intent"]
 
 
+# ---------------------------------------------------------------------------
+# Student and shared actions
+# ---------------------------------------------------------------------------
 def check_availability_node(state: AgentState) -> AgentState:
     system = (
         "Extract the equipment item or category being checked for availability. "
@@ -213,13 +226,14 @@ def request_checkout_node(state: AgentState) -> AgentState:
         }
         return state
 
-    result = store.request_checkout(
+    # Creates a pending request. The Calendar event and confirmation email
+    # happen only after a lab manager approves it.
+    state["result"] = store.request_checkout(
         user["id"],
         record["item_id"],
         days or record.get("checkout_limit_days", 3),
     )
 
-    state["result"] = result
     return state
 
 
@@ -251,8 +265,11 @@ def report_return_node(state: AgentState) -> AgentState:
 
         for returned in result.get("returned", []):
             if returned.get("ok"):
-                returned["calendar"] = calendar_client.delete_event(
-                    returned.get("calendar_event_id")
+                returned["calendar"] = (
+                    calendar_client.delete_checkout_events(
+                        student_user_id=user["id"],
+                        event_ids=returned.get("calendar_event_ids"),
+                    )
                 )
 
         state["result"] = result
@@ -264,6 +281,7 @@ def report_return_node(state: AgentState) -> AgentState:
     )
 
     parsed = _extract_json(system, state["message"], state.get("history"))
+
     item_queries = [
         str(query).strip()
         for query in parsed.get("items", [])
@@ -287,7 +305,9 @@ def report_return_node(state: AgentState) -> AgentState:
                 {
                     "ok": False,
                     "query": query,
-                    "reason": f"Could not find '{query}' among your active checkouts.",
+                    "reason": (
+                        f"Could not find '{query}' among your active checkouts."
+                    ),
                 }
             )
             continue
@@ -296,9 +316,14 @@ def report_return_node(state: AgentState) -> AgentState:
         result["item_name"] = record["name"]
 
         if result.get("ok"):
-            result["calendar"] = calendar_client.delete_event(
-                result.get("calendar_event_id")
+            # Remove both the student's own Calendar event and the LabBot
+            # debug Calendar event independently.
+            result["calendar"] = calendar_client.delete_checkout_events(
+                student_user_id=user["id"],
+                event_ids=result.get("calendar_event_ids"),
             )
+
+            # The LabBot automation account sends the operational email.
             result["email"] = gmail_client.send_return_confirmation(
                 user=user,
                 item_name=record["name"],
@@ -428,6 +453,9 @@ def policy_node(state: AgentState) -> AgentState:
     return state
 
 
+# ---------------------------------------------------------------------------
+# Manager actions
+# ---------------------------------------------------------------------------
 def manager_node(state: AgentState) -> AgentState:
     user = state.get("user")
 
@@ -508,27 +536,46 @@ def manager_node(state: AgentState) -> AgentState:
         result["action"] = action
 
         if result.get("ok") and action == "approve":
-            checkout = result["checkout"]
-
-            calendar = calendar_client.create_due_date_event(
-                item_name=result["item_name"],
-                due_date=checkout["due_date"],
-                checkout_id=checkout["checkout_id"],
+            # The approval result contains a display summary. Reload the
+            # raw checkout record to obtain the internal student ID needed
+            # to use their saved Google Calendar credentials.
+            checkout_summary = result["checkout"]
+            raw_checkout = store.find_checkout(
+                checkout_summary["checkout_id"]
             )
 
-            result["calendar"] = calendar
-
-            if calendar.get("ok"):
-                store.set_calendar_event_id(
-                    checkout["checkout_id"],
-                    calendar.get("event_id"),
+            if raw_checkout:
+                calendar = calendar_client.create_checkout_events(
+                    student_user_id=raw_checkout["student_id"],
+                    item_name=result["item_name"],
+                    due_date=raw_checkout["due_date"],
+                    checkout_id=raw_checkout["checkout_id"],
                 )
 
+                result["calendar"] = calendar
+
+                # Persist IDs even when only one Calendar target succeeds.
+                # The return path can then remove any event that exists.
+                store.set_calendar_event_ids(
+                    checkout_id=raw_checkout["checkout_id"],
+                    event_ids=calendar.get("event_ids", {}),
+                )
+            else:
+                result["calendar"] = {
+                    "ok": False,
+                    "reason": (
+                        "The request was approved, but LabBot could not reload "
+                        "it for Calendar synchronization."
+                    ),
+                }
+
+            # This is sent from the LabBot automation Gmail account to the
+            # student's email address stored in users.json.
             result["email"] = gmail_client.send_checkout_confirmation(
                 user=result.get("student"),
                 item_name=result["item_name"],
-                due_date=checkout["due_date"],
-                checkout_id=checkout["checkout_id"],
+                due_date=checkout_summary["due_date"],
+                checkout_id=checkout_summary["checkout_id"],
             )
 
         state["result"] = result
@@ -632,6 +679,9 @@ def manager_node(state: AgentState) -> AgentState:
     return state
 
 
+# ---------------------------------------------------------------------------
+# Fallback chat
+# ---------------------------------------------------------------------------
 def chat_node(state: AgentState) -> AgentState:
     state["result"] = {
         "ok": True,
@@ -641,6 +691,9 @@ def chat_node(state: AgentState) -> AgentState:
     return state
 
 
+# ---------------------------------------------------------------------------
+# User-facing response generation
+# ---------------------------------------------------------------------------
 def respond_node(state: AgentState) -> AgentState:
     intent = state["intent"]
     result = state.get("result", {})
@@ -701,21 +754,21 @@ def respond_node(state: AgentState) -> AgentState:
         "If a Student checkout request succeeds with status pending, make clear "
         "that it is a request awaiting manager approval, not an active checkout.\n\n"
         "If RESULT contains a non-empty `requests` list, explicitly list every "
-        "request's checkout_id, item_name, student_name, requested_days, and status. "
-        "Never say there are no pending requests when `requests` is non-empty. "
-        "If RESULT contains calendar or email information, report the main "
-        "checkout/return/approval action first. Calendar and email integrations "
-        "are secondary: if either failed, briefly state the provided failure "
-        "without implying the core action failed.\n\n"
+        "request's checkout_id, item_name, student_name, requested_days, and "
+        "status. Never say there are no pending requests when `requests` is "
+        "non-empty.\n\n"
+        "If RESULT contains calendar information with a `targets` list, state "
+        "the primary checkout or return outcome first. Then mention each failed "
+        "Calendar target briefly, using its target name and reason. Do not imply "
+        "that the checkout or return failed merely because a Calendar target "
+        "failed.\n\n"
+        "If RESULT contains email information, email delivery is secondary. "
+        "Mention an email failure briefly only if it failed, without implying "
+        "that the main action failed.\n\n"
         "When describing checkouts, use `student_name` rather than `student_id`, "
-        "and use `approved_by_name` rather than `approved_by_id`. "
-        "When describing damage reports, use `reported_by_name` rather than "
-        "`reported_by_id`. Do not display internal user IDs unless the user "
-        "explicitly asks for them.\n\n"
-        "Never display internal user IDs such as u1, u2, or u3. "
-        "Use student_name, approved_by_name, and reported_by_name whenever "
-        "describing people. If a name is unavailable, say 'Unknown user' rather "
-        "than exposing an internal ID.\n\n"
+        "and use `approved_by_name` rather than internal IDs. When describing "
+        "damage reports, use `reported_by_name`. Never display internal user IDs "
+        "such as u1, u2, or u3 unless explicitly asked.\n\n"
         f"USER: {who}\n"
         f"INTENT: {intent}\n"
         f"RESULT: {json.dumps(result)}"
@@ -730,6 +783,9 @@ def respond_node(state: AgentState) -> AgentState:
     return state
 
 
+# ---------------------------------------------------------------------------
+# Graph construction
+# ---------------------------------------------------------------------------
 def _build_graph():
     graph = StateGraph(AgentState)
 
@@ -769,6 +825,7 @@ def run(
     user: dict | None,
     history: list[dict] | None = None,
 ) -> dict:
+    """Run one authenticated LabBot interaction."""
     final_state = _GRAPH.invoke(
         {
             "message": message,

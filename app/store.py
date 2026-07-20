@@ -340,7 +340,10 @@ def request_checkout(user_id: str, item_id: str, days: int) -> dict:
         "approved_by": None,
         "notes": "",
         "damage_reports": [],
-        "calendar_event_id": None,
+        "calendar_event_ids": {
+            "student_event_id": None,
+            "debug_event_id": None,
+        },
     }
 
     checkouts = load_checkouts()
@@ -375,7 +378,15 @@ def report_return(user_id: str, item_id: str) -> dict:
             ),
         }
 
-    calendar_event_id = checkout.get("calendar_event_id")
+    calendar_event_ids = checkout.get(
+        "calendar_event_ids",
+        {
+            # Backward compatibility with checkouts created before dual-calendar
+            # events were added.
+            "student_event_id": None,
+            "debug_event_id": checkout.get("calendar_event_id"),
+        },
+    )
 
     checkouts = load_checkouts()
 
@@ -398,11 +409,16 @@ def report_return(user_id: str, item_id: str) -> dict:
     return {
         "ok": True,
         "item_id": item_id,
-        "calendar_event_id": calendar_event_id,
+        "calendar_event_ids": calendar_event_ids,
     }
 
 
 def report_all_returns(user_id: str) -> dict:
+    """Return every active or overdue item owned by one student.
+
+    Each returned entry includes both the student's Calendar event ID and the
+    LabBot debug-calendar event ID, which graph.py deletes afterward.
+    """
     active = [
         checkout
         for checkout in load_checkouts()
@@ -416,12 +432,30 @@ def report_all_returns(user_id: str) -> dict:
             "reason": "You do not have any active checked-out items to return.",
         }
 
+    returned = []
+
+    for checkout in active:
+        result = report_return(
+            user_id=user_id,
+            item_id=checkout["item_id"],
+        )
+
+        # `report_return()` should already provide this. The fallback supports
+        # older checkout records created before the two-calendar schema.
+        if result.get("ok") and "calendar_event_ids" not in result:
+            result["calendar_event_ids"] = checkout.get(
+                "calendar_event_ids",
+                {
+                    "student_event_id": None,
+                    "debug_event_id": checkout.get("calendar_event_id"),
+                },
+            )
+
+        returned.append(result)
+
     return {
         "ok": True,
-        "returned": [
-            report_return(user_id, checkout["item_id"])
-            for checkout in active
-        ],
+        "returned": returned,
     }
 
 
@@ -822,6 +856,20 @@ def set_calendar_event_id(checkout_id: str, event_id: str | None) -> None:
     for checkout in checkouts:
         if checkout["checkout_id"] == checkout_id:
             checkout["calendar_event_id"] = event_id
+            break
+
+    save_checkouts(checkouts)
+
+def set_calendar_event_ids(checkout_id: str, event_ids: dict) -> None:
+    """Persist IDs for student and LabBot debug Calendar events."""
+    checkouts = load_checkouts()
+
+    for checkout in checkouts:
+        if checkout["checkout_id"] == checkout_id:
+            checkout["calendar_event_ids"] = {
+                "student_event_id": event_ids.get("student_event_id"),
+                "debug_event_id": event_ids.get("debug_event_id"),
+            }
             break
 
     save_checkouts(checkouts)

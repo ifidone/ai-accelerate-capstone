@@ -170,9 +170,9 @@
     "student_id": "u1",
     "checkout_date": "2026-07-19",
     "due_date": "2026-07-21",
-    "return_date": null,
+    "return_date": "2026-07-20",
     "requested_days": 2,
-    "status": "active",
+    "status": "returned",
     "approved_by": "u2",
     "notes": "[Damage report d-5c7db80f on 2026-07-19] The sensor kit is 5\u00b0C off.",
     "damage_reports": [
@@ -186,5 +186,22 @@
       }
     ],
     "calendar_event_id": "gdbtnr3qcptm3rudprl6d9vtlo"
+  },
+  {
+    "checkout_id": "c-a5752ccb",
+    "item_id": "esp32-01",
+    "student_id": "u1",
+    "checkout_date": "2026-07-20",
+    "due_date": "2026-07-23",
+    "return_date": "2026-07-20",
+    "requested_days": 3,
+    "status": "returned",
+    "approved_by": "u2",
+    "notes": "",
+    "damage_reports": [],
+    "calendar_event_ids": {
+      "student_event_id": null,
+      "debug_event_id": "ku25c9db8qpb8srdolb7asjtps"
+    }
   }
 ]

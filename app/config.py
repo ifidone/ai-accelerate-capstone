@@ -62,6 +62,17 @@ GOOGLE_LOGIN_SCOPES = [
     "openid",
     "https://www.googleapis.com/auth/userinfo.email",
     "https://www.googleapis.com/auth/userinfo.profile",
+    "https://www.googleapis.com/auth/calendar.events",
+]
+
+# User OAuth refresh tokens are stored server-side by local LabBot user ID.
+# For production, use encrypted database storage or a secrets manager.
+USER_GOOGLE_TOKEN_DIR = DATA_DIR / "user_google_tokens"
+USER_GOOGLE_TOKEN_DIR.mkdir(parents=True, exist_ok=True)
+
+# Calendar scope used when loading a signed-in user's saved credentials.
+USER_GOOGLE_CALENDAR_SCOPES = [
+    "https://www.googleapis.com/auth/calendar.events",
 ]
 
 # ---------------------------------------------------------------------------
