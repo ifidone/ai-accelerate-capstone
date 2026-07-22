@@ -6,7 +6,7 @@
     name="viewport"
     content="width=device-width, initial-scale=1"
   />
-  <title>LabBot Inventory</title>
+  <title>My Checkouts · LabBot</title>
 
   <style>
     :root {
@@ -184,6 +184,16 @@
       white-space: nowrap;
     }
 
+    button {
+      border: none;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.55;
+    }
+
     #logout {
       width: auto;
       height: auto;
@@ -195,16 +205,6 @@
       font-size: 0.76rem;
       font-weight: 650;
       box-shadow: var(--shadow-sm);
-    }
-
-    button {
-      border: none;
-      cursor: pointer;
-    }
-
-    button:disabled {
-      cursor: not-allowed;
-      opacity: 0.55;
     }
 
     .page-card {
@@ -274,23 +274,30 @@
       letter-spacing: -0.04em;
     }
 
-    .filters {
-      display: grid;
-      grid-template-columns: minmax(0, 2fr) repeat(2, minmax(150px, 1fr));
-      gap: 0.65rem;
-      margin-bottom: 1.25rem;
+    .filter-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
+
+    .filter-label {
+      color: var(--text-muted);
+      font-size: 0.83rem;
+      font-weight: 600;
     }
 
     .field {
-      width: 100%;
-      padding: 0.72rem 0.85rem;
+      min-width: 190px;
+      padding: 0.7rem 0.85rem;
       border: 1px solid var(--border);
       border-radius: 12px;
       outline: none;
       background: white;
       color: var(--text);
       font: inherit;
-      font-size: 0.9rem;
+      font-size: 0.88rem;
     }
 
     .field:focus {
@@ -298,16 +305,16 @@
       box-shadow: 0 0 0 4px rgba(124, 92, 255, 0.12);
     }
 
-    .inventory-grid {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 0.8rem;
-    }
-
-    .inventory-card {
+    .checkout-list {
       display: flex;
       flex-direction: column;
-      min-height: 175px;
+      gap: 0.75rem;
+    }
+
+    .checkout-card {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 1rem;
       padding: 1rem;
       border: 1px solid var(--border);
       border-radius: 18px;
@@ -315,90 +322,120 @@
       box-shadow: var(--shadow-sm);
     }
 
-    .inventory-card-top {
+    .checkout-title-row {
       display: flex;
       align-items: flex-start;
-      justify-content: space-between;
-      gap: 0.6rem;
+      gap: 0.7rem;
     }
 
-    .inventory-card h3 {
+    .checkout-card h3 {
       margin: 0;
-      font-size: 1rem;
+      font-size: 1.03rem;
       line-height: 1.3;
     }
 
-    .item-id {
-      margin: 0.3rem 0 0;
+    .request-id {
+      margin: 0.25rem 0 0;
       color: var(--text-muted);
       font-family: "SF Mono", "JetBrains Mono", ui-monospace, monospace;
-      font-size: 0.73rem;
+      font-size: 0.72rem;
     }
 
     .status {
+      display: inline-flex;
       flex: 0 0 auto;
-      padding: 0.3rem 0.52rem;
+      align-items: center;
+      padding: 0.3rem 0.55rem;
       border-radius: 999px;
       font-size: 0.7rem;
       font-weight: 750;
       text-transform: capitalize;
     }
 
-    .status.available {
-      background: rgba(71, 230, 193, 0.18);
-      color: #107c62;
-    }
-
-    .status.checked_out {
+    .status.pending {
       background: rgba(244, 176, 0, 0.18);
       color: #956300;
     }
 
-    .status.damaged {
+    .status.active {
+      background: rgba(71, 230, 193, 0.18);
+      color: #107c62;
+    }
+
+    .status.overdue {
       background: rgba(244, 50, 86, 0.14);
       color: #b0203c;
     }
 
-    .status.under_repair {
-      background: rgba(162, 89, 234, 0.14);
-      color: #7040ae;
-    }
-
-    .status.retired {
+    .status.denied {
       background: rgba(119, 119, 119, 0.14);
       color: #5d5d5d;
     }
 
-    .item-meta {
+    .checkout-meta {
       display: flex;
       flex-wrap: wrap;
       gap: 0.45rem;
-      margin-top: auto;
-      padding-top: 1rem;
+      margin-top: 0.85rem;
     }
 
     .meta-pill {
-      padding: 0.3rem 0.5rem;
+      padding: 0.32rem 0.52rem;
       border-radius: 999px;
       background: rgba(20, 20, 40, 0.05);
+      color: var(--text-muted);
+      font-size: 0.74rem;
+    }
+
+    .time-panel {
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      min-width: 115px;
+      padding-left: 1rem;
+      border-left: 1px dashed var(--border);
+      text-align: right;
+    }
+
+    .time-panel strong {
+      display: block;
+      font-size: 1.05rem;
+    }
+
+    .time-panel span {
+      display: block;
+      margin-top: 0.2rem;
       color: var(--text-muted);
       font-size: 0.72rem;
     }
 
-    .manager-note {
-      margin-top: 0.8rem;
+    .time-panel.overdue strong {
+      color: #b0203c;
+    }
+
+    .time-panel.pending strong {
+      color: #956300;
+    }
+
+    .damage-note {
+      margin-top: 0.75rem;
       padding-top: 0.7rem;
       border-top: 1px dashed var(--border);
       color: var(--text-muted);
-      font-size: 0.76rem;
-      line-height: 1.4;
+      font-size: 0.78rem;
     }
 
     .empty {
-      grid-column: 1 / -1;
-      padding: 2.5rem 1rem;
+      padding: 3rem 1rem;
       color: var(--text-muted);
       text-align: center;
+    }
+
+    .empty strong {
+      display: block;
+      margin-bottom: 0.4rem;
+      color: var(--text);
+      font-size: 1.05rem;
     }
 
     .error {
@@ -418,10 +455,6 @@
       .stats {
         grid-template-columns: repeat(2, minmax(0, 1fr));
       }
-
-      .inventory-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-      }
     }
 
     @media (max-width: 560px) {
@@ -435,21 +468,32 @@
         gap: 0.65rem;
       }
 
-      .filters {
-        grid-template-columns: 1fr;
-      }
-
-      .inventory-grid {
-        grid-template-columns: 1fr;
-      }
-
       .page-card {
         padding: 1rem;
       }
 
-      .page-heading {
+      .page-heading,
+      .filter-row {
         align-items: flex-start;
         flex-direction: column;
+      }
+
+      .field {
+        width: 100%;
+      }
+
+      .checkout-card {
+        grid-template-columns: 1fr;
+      }
+
+      .time-panel {
+        align-items: flex-start;
+        min-width: 0;
+        padding-top: 0.75rem;
+        padding-left: 0;
+        border-top: 1px dashed var(--border);
+        border-left: none;
+        text-align: left;
       }
     }
   </style>
@@ -469,10 +513,10 @@
         </div>
 
         <nav class="main-nav" aria-label="Primary navigation">
-            <a class="nav-link" href="/">Chat</a>
-            <a class="nav-link active" href="/inventory">Inventory</a>
-            <a class="nav-link" href="/my-checkouts">My checkouts</a>
-          </nav>
+          <a class="nav-link" href="/">Chat</a>
+          <a class="nav-link" href="/inventory">Inventory</a>
+          <a class="nav-link active" href="/my-checkouts">My checkouts</a>
+        </nav>
       </div>
 
       <div class="account">
@@ -484,70 +528,59 @@
     <main class="page-card">
       <section class="page-heading">
         <div>
-          <h2>Equipment inventory</h2>
+          <h2>My checkouts</h2>
           <p>
-            Search shared lab equipment and filter by availability or category.
+            Track active equipment, pending requests, overdue items, and denied requests.
           </p>
         </div>
 
         <span id="role-badge" class="role-badge">Loading role…</span>
       </section>
 
-      <section class="stats" aria-label="Inventory summary">
+      <section class="stats" aria-label="Checkout summary">
         <div class="stat-card">
-          <span>Total equipment</span>
-          <strong id="total-count">–</strong>
+          <span>Pending approval</span>
+          <strong id="pending-count">–</strong>
         </div>
 
         <div class="stat-card">
-          <span>Available now</span>
-          <strong id="available-count">–</strong>
+          <span>Active</span>
+          <strong id="active-count">–</strong>
         </div>
 
         <div class="stat-card">
-          <span>Checked out</span>
-          <strong id="checked-out-count">–</strong>
+          <span>Overdue</span>
+          <strong id="overdue-count">–</strong>
         </div>
 
         <div class="stat-card">
-          <span>Unavailable / repair</span>
-          <strong id="unavailable-count">–</strong>
+          <span>Denied</span>
+          <strong id="denied-count">–</strong>
         </div>
       </section>
 
-      <section class="filters" aria-label="Inventory filters">
-        <input
-          id="search"
-          class="field"
-          type="search"
-          placeholder="Search equipment, category, or item ID…"
-          autocomplete="off"
-        />
-
-        <select id="status-filter" class="field" aria-label="Filter by status">
-          <option value="all">All statuses</option>
-          <option value="available">Available</option>
-          <option value="checked_out">Checked out</option>
-          <option value="under_repair">Under repair</option>
-          <option value="damaged">Damaged</option>
-          <option value="retired">Retired</option>
-        </select>
+      <section class="filter-row">
+        <span id="result-label" class="filter-label">Loading checkouts…</span>
 
         <select
-          id="category-filter"
+          id="status-filter"
           class="field"
-          aria-label="Filter by category"
+          aria-label="Filter checkout status"
         >
-          <option value="all">All categories</option>
+          <option value="all">All current records</option>
+          <option value="active">Active</option>
+          <option value="pending">Pending approval</option>
+          <option value="overdue">Overdue</option>
+          <option value="denied">Denied</option>
         </select>
       </section>
 
       <section
-        id="inventory-grid"
-        class="inventory-grid"
+        id="checkout-list"
+        class="checkout-list"
         aria-live="polite"
       >
-        <div class="empty">Loading inventory…</div>
+        <div class="empty">Loading your checkout records…</div>
       </section>
     </main>
   </div>
@@ -557,18 +590,17 @@
     const roleBadge = document.getElementById("role-badge");
     const logoutBtn = document.getElementById("logout");
 
-    const searchInput = document.getElementById("search");
-    const statusFilter = document.getElementById("status-filter");
-    const categoryFilter = document.getElementById("category-filter");
-    const inventoryGrid = document.getElementById("inventory-grid");
+    const pendingCount = document.getElementById("pending-count");
+    const activeCount = document.getElementById("active-count");
+    const overdueCount = document.getElementById("overdue-count");
+    const deniedCount = document.getElementById("denied-count");
 
-    const totalCount = document.getElementById("total-count");
-    const availableCount = document.getElementById("available-count");
-    const checkedOutCount = document.getElementById("checked-out-count");
-    const unavailableCount = document.getElementById("unavailable-count");
+    const statusFilter = document.getElementById("status-filter");
+    const resultLabel = document.getElementById("result-label");
+    const checkoutList = document.getElementById("checkout-list");
 
     let currentUser = null;
-    let inventory = [];
+    let checkouts = [];
 
     function prettyStatus(status) {
       return String(status || "unknown")
@@ -576,10 +608,25 @@
         .replace(/\b\w/g, letter => letter.toUpperCase());
     }
 
-    function prettyCategory(category) {
-      return String(category || "uncategorized")
-        .replaceAll("_", " ")
-        .replace(/\b\w/g, letter => letter.toUpperCase());
+    function formatDate(value) {
+      if (!value) {
+        return "Not set";
+      }
+
+      const date = new Date(`${value}T12:00:00`);
+
+      if (Number.isNaN(date.getTime())) {
+        return value;
+      }
+
+      return new Intl.DateTimeFormat(
+        "en-US",
+        {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        },
+      ).format(date);
     }
 
     async function readError(response) {
@@ -620,146 +667,199 @@
       return true;
     }
 
-    function populateCategories(items) {
-      const previous = categoryFilter.value;
-      const categories = [
-        ...new Set(items.map(item => item.category).filter(Boolean)),
-      ].sort();
-
-      categoryFilter.innerHTML = `
-        <option value="all">All categories</option>
-      `;
-
-      for (const category of categories) {
-        const option = document.createElement("option");
-        option.value = category;
-        option.textContent = prettyCategory(category);
-        categoryFilter.appendChild(option);
-      }
-
-      if (
-        previous === "all"
-        || categories.includes(previous)
-      ) {
-        categoryFilter.value = previous;
-      }
+    function updateSummary(summary) {
+      pendingCount.textContent = summary.pending ?? 0;
+      activeCount.textContent = summary.active ?? 0;
+      overdueCount.textContent = summary.overdue ?? 0;
+      deniedCount.textContent = summary.denied ?? 0;
     }
 
-    function updateStats(items) {
-      const total = items.length;
-      const available = items.filter(
-        item => item.status === "available",
-      ).length;
-      const checkedOut = items.filter(
-        item => item.status === "checked_out",
-      ).length;
-      const unavailable = total - available - checkedOut;
-
-      totalCount.textContent = total;
-      availableCount.textContent = available;
-      checkedOutCount.textContent = checkedOut;
-      unavailableCount.textContent = unavailable;
-    }
-
-    function filteredInventory() {
-      const search = searchInput.value.trim().toLowerCase();
+    function filteredCheckouts() {
       const selectedStatus = statusFilter.value;
-      const selectedCategory = categoryFilter.value;
 
-      return inventory.filter(item => {
-        const searchable = [
-          item.name,
-          item.item_id,
-          item.category,
-          item.status,
-        ]
-          .filter(Boolean)
-          .join(" ")
-          .toLowerCase();
+      if (selectedStatus === "all") {
+        return checkouts;
+      }
 
-        const matchesSearch = !search || searchable.includes(search);
-        const matchesStatus = (
-          selectedStatus === "all"
-          || item.status === selectedStatus
-        );
-        const matchesCategory = (
-          selectedCategory === "all"
-          || item.category === selectedCategory
-        );
-
-        return matchesSearch && matchesStatus && matchesCategory;
-      });
+      return checkouts.filter(
+        checkout => checkout.status === selectedStatus,
+      );
     }
 
-    function renderInventory() {
-      const items = filteredInventory();
-      inventoryGrid.innerHTML = "";
+    function timeSummary(checkout) {
+      if (checkout.status === "pending") {
+        return {
+          value: "Pending",
+          label: "Awaiting approval",
+          className: "pending",
+        };
+      }
+
+      if (checkout.status === "denied") {
+        return {
+          value: "Denied",
+          label: "Request not approved",
+          className: "denied",
+        };
+      }
+
+      if (checkout.status === "overdue" || checkout.overdue_days > 0) {
+        const days = checkout.overdue_days || 0;
+
+        return {
+          value: `${days} day${days === 1 ? "" : "s"} late`,
+          label: "Return as soon as possible",
+          className: "overdue",
+        };
+      }
+
+      if (typeof checkout.days_remaining === "number") {
+        const days = checkout.days_remaining;
+
+        return {
+          value: (
+            days === 0
+              ? "Due today"
+              : `${days} day${days === 1 ? "" : "s"} left`
+          ),
+          label: `Due ${formatDate(checkout.due_date)}`,
+          className: "active",
+        };
+      }
+
+      return {
+        value: "Active",
+        label: "Checkout in progress",
+        className: "active",
+      };
+    }
+
+    function createPill(text) {
+      const pill = document.createElement("span");
+      pill.className = "meta-pill";
+      pill.textContent = text;
+      return pill;
+    }
+
+    function renderCheckouts() {
+      const items = filteredCheckouts();
+      checkoutList.innerHTML = "";
+
+      resultLabel.textContent = (
+        items.length === 1
+          ? "1 current checkout or request"
+          : `${items.length} current checkouts or requests`
+      );
 
       if (items.length === 0) {
         const empty = document.createElement("div");
         empty.className = "empty";
-        empty.textContent = "No equipment matches your current filters.";
-        inventoryGrid.appendChild(empty);
+
+        const title = document.createElement("strong");
+        title.textContent = "No matching records.";
+
+        const text = document.createElement("span");
+        text.textContent = (
+          statusFilter.value === "all"
+            ? "You do not currently have any checkout requests or equipment out."
+            : "No current records match this status filter."
+        );
+
+        empty.append(title, text);
+        checkoutList.appendChild(empty);
         return;
       }
 
-      for (const item of items) {
+      for (const checkout of items) {
         const card = document.createElement("article");
-        card.className = "inventory-card";
+        card.className = "checkout-card";
 
-        const top = document.createElement("div");
-        top.className = "inventory-card-top";
+        const main = document.createElement("div");
+
+        const titleRow = document.createElement("div");
+        titleRow.className = "checkout-title-row";
 
         const titleArea = document.createElement("div");
 
         const title = document.createElement("h3");
-        title.textContent = item.name;
+        title.textContent = checkout.item_name;
 
-        const itemId = document.createElement("p");
-        itemId.className = "item-id";
-        itemId.textContent = item.item_id;
+        const requestId = document.createElement("p");
+        requestId.className = "request-id";
+        requestId.textContent = checkout.checkout_id;
 
-        titleArea.append(title, itemId);
+        titleArea.append(title, requestId);
 
         const status = document.createElement("span");
-        status.className = `status ${item.status}`;
-        status.textContent = prettyStatus(item.status);
+        status.className = `status ${checkout.status}`;
+        status.textContent = prettyStatus(checkout.status);
 
-        top.append(titleArea, status);
+        titleRow.append(titleArea, status);
 
         const meta = document.createElement("div");
-        meta.className = "item-meta";
+        meta.className = "checkout-meta";
 
-        const category = document.createElement("span");
-        category.className = "meta-pill";
-        category.textContent = prettyCategory(item.category);
-
-        const limit = document.createElement("span");
-        limit.className = "meta-pill";
-        limit.textContent = item.checkout_limit_days
-          ? `Up to ${item.checkout_limit_days} days`
-          : "No checkout limit set";
-
-        meta.append(category, limit);
-
-        card.append(top, meta);
-
-        if (
-          currentUser?.role === "lab_manager"
-          && item.manager_note
-        ) {
-          const managerNote = document.createElement("div");
-          managerNote.className = "manager-note";
-          managerNote.textContent = `Manager note: ${item.manager_note}`;
-          card.appendChild(managerNote);
+        if (checkout.requested_days) {
+          meta.append(
+            createPill(
+              `Requested: ${checkout.requested_days} day${
+                checkout.requested_days === 1 ? "" : "s"
+              }`,
+            ),
+          );
         }
 
-        inventoryGrid.appendChild(card);
+        if (checkout.due_date) {
+          meta.append(
+            createPill(`Due: ${formatDate(checkout.due_date)}`),
+          );
+        }
+
+        if (checkout.approved_by_name) {
+          meta.append(
+            createPill(`Approved by: ${checkout.approved_by_name}`),
+          );
+        }
+
+        if (checkout.damage_report_count > 0) {
+          meta.append(
+            createPill(
+              `${checkout.damage_report_count} damage report${
+                checkout.damage_report_count === 1 ? "" : "s"
+              }`,
+            ),
+          );
+        }
+
+        main.append(titleRow, meta);
+
+        if (checkout.notes) {
+          const note = document.createElement("div");
+          note.className = "damage-note";
+          note.textContent = `Notes: ${checkout.notes}`;
+          main.appendChild(note);
+        }
+
+        const time = timeSummary(checkout);
+
+        const timePanel = document.createElement("div");
+        timePanel.className = `time-panel ${time.className}`;
+
+        const value = document.createElement("strong");
+        value.textContent = time.value;
+
+        const label = document.createElement("span");
+        label.textContent = time.label;
+
+        timePanel.append(value, label);
+
+        card.append(main, timePanel);
+        checkoutList.appendChild(card);
       }
     }
 
-    async function loadInventory() {
-      const response = await fetch("/api/inventory", {
+    async function loadCheckouts() {
+      const response = await fetch("/api/my-checkouts", {
         credentials: "same-origin",
       });
 
@@ -773,31 +873,26 @@
       }
 
       const payload = await response.json();
-      inventory = Array.isArray(payload.items) ? payload.items : [];
 
-      updateStats(inventory);
-      populateCategories(inventory);
-      renderInventory();
+      checkouts = Array.isArray(payload.items)
+        ? payload.items
+        : [];
+
+      updateSummary(payload.summary || {});
+      renderCheckouts();
     }
 
-    function showInventoryError(message) {
-      inventoryGrid.innerHTML = "";
+    function showError(message) {
+      checkoutList.innerHTML = "";
 
       const error = document.createElement("div");
       error.className = "error";
       error.textContent = message;
 
-      inventoryGrid.appendChild(error);
+      checkoutList.appendChild(error);
     }
 
-    for (const control of [
-      searchInput,
-      statusFilter,
-      categoryFilter,
-    ]) {
-      control.addEventListener("input", renderInventory);
-      control.addEventListener("change", renderInventory);
-    }
+    statusFilter.addEventListener("change", renderCheckouts);
 
     logoutBtn.addEventListener("click", async () => {
       logoutBtn.disabled = true;
@@ -820,13 +915,13 @@
           return;
         }
 
-        await loadInventory();
+        await loadCheckouts();
       } catch (error) {
         signedInAs.textContent = "Session unavailable";
         roleBadge.textContent = "Unavailable";
 
-        showInventoryError(
-          `Could not load inventory: ${
+        showError(
+          `Could not load your checkouts: ${
             error instanceof Error ? error.message : String(error)
           }`,
         );

@@ -203,5 +203,22 @@
       "student_event_id": null,
       "debug_event_id": "ku25c9db8qpb8srdolb7asjtps"
     }
+  },
+  {
+    "checkout_id": "c-20d20353",
+    "item_id": "esp32-01",
+    "student_id": "u1",
+    "checkout_date": "2026-07-22",
+    "due_date": null,
+    "return_date": null,
+    "requested_days": 3,
+    "status": "pending",
+    "approved_by": null,
+    "notes": "",
+    "damage_reports": [],
+    "calendar_event_ids": {
+      "student_event_id": null,
+      "debug_event_id": null
+    }
   }
 ]

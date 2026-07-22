@@ -102,6 +102,29 @@ def inventory(request: Request):
         )
     }
 
+@app.get("/my-checkouts")
+def my_checkouts_page():
+    """Show the authenticated user's current checkout dashboard."""
+    return FileResponse(Path(__file__).parent / "my_checkouts.html")
+
+
+@app.get("/api/my-checkouts")
+def my_checkouts(request: Request):
+    """Return current requests/checkouts for the signed-in user only."""
+    user = auth.current_user(request)
+
+    items = store.my_current_checkouts(user["id"])
+
+    return {
+        "items": items,
+        "summary": {
+            "pending": sum(item["status"] == "pending" for item in items),
+            "active": sum(item["status"] == "active" for item in items),
+            "overdue": sum(item["status"] == "overdue" for item in items),
+            "denied": sum(item["status"] == "denied" for item in items),
+        },
+    }
+
 @app.get("/api/auth/login")
 def google_login(request: Request):
     code_verifier = secrets.token_urlsafe(64)

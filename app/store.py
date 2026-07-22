@@ -905,3 +905,58 @@ def inventory_catalog(include_manager_details: bool = False) -> list[dict]:
             item["item_id"].lower(),
         ),
     )
+
+def my_current_checkouts(user_id: str) -> list[dict]:
+    """Return current checkout/request records for one authenticated user.
+
+    This is designed for the My Checkouts dashboard. It includes pending,
+    active, overdue, and denied requests, but excludes completed returns.
+    """
+    today = date.today()
+    current_statuses = ("pending", "active", "overdue", "denied")
+
+    items = []
+
+    for checkout in load_checkouts():
+        if checkout["student_id"] != user_id:
+            continue
+
+        if checkout["status"] not in current_statuses:
+            continue
+
+        summary = _checkout_summary(checkout)
+
+        due_date = checkout.get("due_date")
+        days_remaining = None
+        overdue_days = None
+
+        if due_date and checkout["status"] in ("active", "overdue"):
+            due = datetime.strptime(due_date, "%Y-%m-%d").date()
+            days_remaining = (due - today).days
+
+            if days_remaining < 0:
+                overdue_days = abs(days_remaining)
+
+        summary["days_remaining"] = days_remaining
+        summary["overdue_days"] = overdue_days
+        summary["damage_report_count"] = len(
+            checkout.get("damage_reports", [])
+        )
+
+        items.append(summary)
+
+    status_order = {
+        "overdue": 0,
+        "active": 1,
+        "pending": 2,
+        "denied": 3,
+    }
+
+    return sorted(
+        items,
+        key=lambda item: (
+            status_order.get(item["status"], 99),
+            item.get("due_date") or "9999-12-31",
+            item["item_name"].lower(),
+        ),
+    )
