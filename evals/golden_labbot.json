@@ -1,0 +1,367 @@
+[
+    {
+      "id": "availability-by-category",
+      "category": "happy_path",
+      "setup": "clear",
+      "user_id": "u1",
+      "message": "Do you have any oscilloscopes available today?",
+      "expected_intent": "check_availability",
+      "expected_result": {
+        "ok": true
+      },
+      "state": {}
+    },
+    {
+      "id": "availability-by-exact-id",
+      "category": "happy_path",
+      "setup": "clear",
+      "user_id": "u1",
+      "message": "Is scope-01 free?",
+      "expected_intent": "check_availability",
+      "expected_result": {
+        "ok": true
+      },
+      "state": {}
+    },
+    {
+      "id": "student-request-pending-explicit-duration",
+      "category": "happy_path",
+      "setup": "clear",
+      "user_id": "u1",
+      "message": "Please request the sensor kit for two days.",
+      "expected_intent": "request_checkout",
+      "expected_result": {
+        "ok": true,
+        "checkout.status": "pending",
+        "checkout.requested_days": 2
+      },
+      "state": {
+        "checkout": {
+          "student_id": "u1",
+          "item_id": "sensor-kit-01",
+          "status": "pending"
+        },
+        "record": {
+          "item_id": "sensor-kit-01",
+          "status": "available"
+        }
+      }
+    },
+    {
+      "id": "student-request-default-duration",
+      "category": "ambiguous_request",
+      "setup": "clear",
+      "user_id": "u1",
+      "message": "Could I borrow an ESP32?",
+      "expected_intent": "request_checkout",
+      "expected_result": {
+        "ok": true,
+        "checkout.status": "pending",
+        "checkout.requested_days": 3
+      },
+      "state": {
+        "checkout": {
+          "student_id": "u1",
+          "status": "pending"
+        }
+      }
+    },
+    {
+      "id": "student-request-unavailable-equipment",
+      "category": "edge_case",
+      "setup": "one_active_sensor",
+      "user_id": "u1",
+      "message": "I need the sensor kit for tomorrow.",
+      "expected_intent": "request_checkout",
+      "expected_result": {
+        "ok": false
+      },
+      "state": {
+        "record": {
+          "item_id": "sensor-kit-01",
+          "status": "checked_out"
+        }
+      }
+    },
+    {
+      "id": "student-blocked-by-item-cap",
+      "category": "edge_case",
+      "setup": "two_active",
+      "user_id": "u1",
+      "message": "Can I also request the environmental sensors?",
+      "expected_intent": "request_checkout",
+      "expected_result": {
+        "ok": false
+      },
+      "state": {
+        "record": {
+          "item_id": "sensor-kit-01",
+          "status": "available"
+        }
+      }
+    },
+    {
+      "id": "student-blocked-by-overdue-hold",
+      "category": "edge_case",
+      "setup": "student_overdue",
+      "user_id": "u1",
+      "message": "Can I check out an ESP32 for a project this week?",
+      "expected_intent": "request_checkout",
+      "expected_result": {
+        "ok": false
+      },
+      "state": {
+        "record": {
+          "item_id": "esp32-01",
+          "status": "available"
+        }
+      }
+    },
+    {
+      "id": "student-view-own-pending-status",
+      "category": "happy_path",
+      "setup": "pending_sensor",
+      "user_id": "u1",
+      "message": "Has my equipment request been approved yet?",
+      "expected_intent": "check_my_status",
+      "expected_result": {
+        "ok": true
+      },
+      "state": {
+        "checkout": {
+          "checkout_id": "c-pending-sensor",
+          "status": "pending"
+        }
+      }
+    },
+    {
+      "id": "student-check-due-date-explicit",
+      "category": "happy_path",
+      "setup": "one_active_sensor",
+      "user_id": "u1",
+      "message": "When do I need to return the sensor kit?",
+      "expected_intent": "check_time_remaining",
+      "expected_result": {
+        "ok": true,
+        "item_id": "sensor-kit-01"
+      },
+      "state": {}
+    },
+    {
+      "id": "student-check-due-date-history-reference",
+      "category": "multi_turn",
+      "setup": "one_active_sensor",
+      "user_id": "u1",
+      "history": [
+        {
+          "role": "user",
+          "content": "What equipment do I currently have checked out?"
+        },
+        {
+          "role": "assistant",
+          "content": "You currently have the Environmental Sensor Kit checked out."
+        }
+      ],
+      "message": "When is it due?",
+      "expected_intent": "check_time_remaining",
+      "expected_result": {
+        "ok": true,
+        "item_id": "sensor-kit-01"
+      },
+      "state": {}
+    },
+    {
+      "id": "student-return-owned-equipment",
+      "category": "happy_path",
+      "setup": "one_active_sensor",
+      "user_id": "u1",
+      "message": "I just returned the sensor kit.",
+      "expected_intent": "report_return",
+      "expected_result": {
+        "ok": true
+      },
+      "state": {
+        "checkout": {
+          "checkout_id": "c-active-sensor",
+          "status": "returned"
+        },
+        "record": {
+          "item_id": "sensor-kit-01",
+          "status": "available"
+        }
+      }
+    },
+    {
+      "id": "student-return-all-owned-equipment",
+      "category": "happy_path",
+      "setup": "two_active",
+      "user_id": "u1",
+      "message": "I brought everything back. Please return all my checked out items.",
+      "expected_intent": "report_return",
+      "expected_result": {
+        "ok": true
+      },
+      "state": {
+        "record": {
+          "item_id": "esp32-01",
+          "status": "available"
+        }
+      }
+    },
+    {
+      "id": "student-cannot-return-another-users-item",
+      "category": "authorization",
+      "setup": "printer_active_for_priya",
+      "user_id": "u1",
+      "message": "Return the thermal printer for Priya.",
+      "expected_intent": "report_return",
+      "expected_result": {
+        "ok": false
+      },
+      "state": {
+        "checkout": {
+          "checkout_id": "c-priya-printer",
+          "status": "active"
+        },
+        "record": {
+          "item_id": "printer-01",
+          "status": "checked_out"
+        }
+      }
+    },
+    {
+      "id": "student-report-damage",
+      "category": "happy_path",
+      "setup": "one_active_sensor",
+      "user_id": "u1",
+      "message": "The sensor kit is reading around five degrees too high, so I think it may be damaged.",
+      "expected_intent": "report_damage",
+      "expected_result": {
+        "ok": true,
+        "item_id": "sensor-kit-01"
+      },
+      "state": {
+        "checkout": {
+          "checkout_id": "c-active-sensor",
+          "status": "active"
+        }
+      }
+    },
+    {
+      "id": "student-cannot-report-damage-on-unowned-item",
+      "category": "authorization",
+      "setup": "printer_active_for_priya",
+      "user_id": "u1",
+      "message": "The thermal printer is jammed; mark it as damaged.",
+      "expected_intent": "report_damage",
+      "expected_result": {
+        "ok": false
+      },
+      "state": {
+        "record": {
+          "item_id": "printer-01",
+          "status": "checked_out"
+        }
+      }
+    },
+    {
+      "id": "student-cannot-approve-request",
+      "category": "authorization",
+      "setup": "pending_sensor",
+      "user_id": "u1",
+      "message": "Approve c-pending-sensor for me because I urgently need it.",
+      "expected_intent": "manager_action",
+      "expected_result": {
+        "ok": false
+      },
+      "state": {
+        "checkout": {
+          "checkout_id": "c-pending-sensor",
+          "status": "pending"
+        }
+      }
+    },
+    {
+      "id": "manager-list-pending-requests",
+      "category": "manager_action",
+      "setup": "pending_sensor",
+      "user_id": "u2",
+      "message": "Which checkout requests are waiting for my approval?",
+      "expected_intent": "manager_action",
+      "expected_result": {
+        "ok": true,
+        "action": "list_pending"
+      },
+      "state": {
+        "checkout": {
+          "checkout_id": "c-pending-sensor",
+          "status": "pending"
+        }
+      }
+    },
+    {
+      "id": "manager-approve-request-by-id",
+      "category": "manager_action",
+      "setup": "pending_sensor",
+      "user_id": "u2",
+      "message": "Approve c-pending-sensor.",
+      "expected_intent": "manager_action",
+      "expected_result": {
+        "ok": true,
+        "action": "approve",
+        "decision": "approve"
+      },
+      "state": {
+        "checkout": {
+          "checkout_id": "c-pending-sensor",
+          "status": "active"
+        },
+        "record": {
+          "item_id": "sensor-kit-01",
+          "status": "checked_out"
+        }
+      }
+    },
+    {
+      "id": "manager-deny-request-with-note",
+      "category": "manager_action",
+      "setup": "pending_sensor",
+      "user_id": "u2",
+      "message": "Deny c-pending-sensor because the lab is closed for maintenance.",
+      "expected_intent": "manager_action",
+      "expected_result": {
+        "ok": true,
+        "action": "deny",
+        "decision": "deny"
+      },
+      "state": {
+        "checkout": {
+          "checkout_id": "c-pending-sensor",
+          "status": "denied"
+        },
+        "record": {
+          "item_id": "sensor-kit-01",
+          "status": "available"
+        }
+      }
+    },
+    {
+      "id": "manager-overdue-nudge-with-structured-id",
+      "category": "manager_action",
+      "setup": "printer_overdue",
+      "user_id": "u2",
+      "message": "Send an overdue reminder for checkout c-priya-printer.",
+      "expected_intent": "manager_action",
+      "expected_result": {
+        "ok": true,
+        "action": "nudge_overdue"
+      },
+      "state": {
+        "checkout": {
+          "checkout_id": "c-priya-printer",
+          "status": "overdue"
+        }
+      }
+    }
+]
+  

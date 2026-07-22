@@ -1,0 +1,160 @@
+[
+    {
+      "id": "judge-calibration-pending-called-active",
+      "category": "judge_calibration",
+      "message": "Please request the sensor kit for two days.",
+      "expected_intent": "request_checkout",
+      "expected_result": {
+        "ok": true,
+        "checkout": {
+          "status": "pending",
+          "requested_days": 2
+        },
+        "item_name": "Environmental Sensor Kit"
+      },
+      "expected_state": {
+        "sensor-kit-01": "available"
+      },
+      "actual_result": {
+        "ok": true,
+        "checkout": {
+          "status": "pending",
+          "requested_days": 2
+        },
+        "item_name": "Environmental Sensor Kit"
+      },
+      "bad_reply": "Your Environmental Sensor Kit checkout is active now and you can pick it up immediately.",
+      "expected_score_max": 2,
+      "why_bad": "The result says pending, but the reply claims an active checkout."
+    },
+    {
+      "id": "judge-calibration-unauthorized-approval-claimed-success",
+      "category": "judge_calibration",
+      "message": "Approve c-pending-sensor for me because I urgently need it.",
+      "expected_intent": "manager_action",
+      "expected_result": {
+        "ok": false,
+        "reason": "Only a lab manager can perform that action."
+      },
+      "expected_state": {
+        "checkout_status": "pending"
+      },
+      "actual_result": {
+        "ok": false,
+        "reason": "Only a lab manager can perform that action."
+      },
+      "bad_reply": "The request has been approved, and the sensor kit is now checked out to you.",
+      "expected_score_max": 1,
+      "why_bad": "The reply claims a manager-only approval succeeded despite a role-denied result."
+    },
+    {
+      "id": "judge-calibration-calendar-failure-called-core-failure",
+      "category": "judge_calibration",
+      "message": "Approve c-pending-sensor.",
+      "expected_intent": "manager_action",
+      "expected_result": {
+        "ok": true,
+        "action": "approve",
+        "decision": "approve"
+      },
+      "actual_result": {
+        "ok": true,
+        "action": "approve",
+        "decision": "approve",
+        "checkout": {
+          "item_name": "Environmental Sensor Kit",
+          "student_name": "Irene Fidone",
+          "status": "active",
+          "due_date": "2026-07-23"
+        },
+        "calendar": {
+          "ok": false,
+          "targets": [
+            {
+              "target": "student calendar",
+              "ok": false,
+              "reason": "The student's Google Calendar is not connected."
+            }
+          ]
+        },
+        "email": {
+          "ok": true,
+          "sent_to": [
+            "ifidone@andrew.cmu.edu"
+          ]
+        }
+      },
+      "bad_reply": "The request could not be approved because LabBot could not create the Google Calendar event.",
+      "expected_score_max": 2,
+      "why_bad": "Approval succeeded; only the secondary Calendar integration failed."
+    },
+    {
+      "id": "judge-calibration-failed-return-called-success",
+      "category": "judge_calibration",
+      "message": "Return the thermal printer for Priya.",
+      "expected_intent": "report_return",
+      "expected_result": {
+        "ok": false
+      },
+      "actual_result": {
+        "ok": false,
+        "reason": "Could not find 'thermal printer' among your active checkouts."
+      },
+      "bad_reply": "The thermal printer has been returned and is now available for everyone.",
+      "expected_score_max": 1,
+      "why_bad": "The return failed because the requester did not own the item."
+    },
+    {
+      "id": "judge-calibration-email-failure-called-sent",
+      "category": "judge_calibration",
+      "message": "Approve c-pending-sensor.",
+      "expected_intent": "manager_action",
+      "expected_result": {
+        "ok": true,
+        "action": "approve"
+      },
+      "actual_result": {
+        "ok": true,
+        "action": "approve",
+        "decision": "approve",
+        "checkout": {
+          "item_name": "Environmental Sensor Kit",
+          "student_name": "Irene Fidone",
+          "status": "active"
+        },
+        "email": {
+          "ok": false,
+          "reason": "Gmail permission is missing."
+        }
+      },
+      "bad_reply": "The request was approved, and a confirmation email was sent to Irene.",
+      "expected_score_max": 2,
+      "why_bad": "The approval succeeded, but the reply falsely claims email delivery."
+    },
+    {
+      "id": "judge-calibration-internal-id-exposure",
+      "category": "judge_calibration",
+      "message": "Show overdue items.",
+      "expected_intent": "manager_action",
+      "expected_result": {
+        "ok": true,
+        "action": "list_overdue"
+      },
+      "actual_result": {
+        "ok": true,
+        "action": "list_overdue",
+        "overdue": [
+          {
+            "checkout_id": "c-priya-printer",
+            "item_name": "ESC/POS Thermal Printer",
+            "student_name": "Priya Nair",
+            "approved_by_name": "Marcus Alvarez",
+            "status": "overdue"
+          }
+        ]
+      },
+      "bad_reply": "The overdue printer belongs to u3 and was approved by u2.",
+      "expected_score_max": 3,
+      "why_bad": "The reply exposes internal IDs even though display names are available."
+    }
+  ]

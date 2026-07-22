@@ -7,6 +7,7 @@ All manager-only actions are enforced in deterministic Python code.
 from __future__ import annotations
 
 import json
+import re
 from datetime import date
 from typing import Optional, TypedDict
 
@@ -493,6 +494,29 @@ def manager_node(state: AgentState) -> AgentState:
     checkout_id = parsed.get("checkout_id")
     item_query = str(parsed.get("item") or "").strip()
     note = str(parsed.get("note") or "").strip()
+    
+    if not checkout_id:
+        checkout_match = re.search(
+            r"\bc-[a-zA-Z0-9_-]+\b",
+            state["message"],
+        )
+
+        if checkout_match:
+            checkout_id = checkout_match.group(0)
+
+    message_lower = state["message"].lower()
+
+    if any(
+        phrase in message_lower
+        for phrase in (
+            "send an overdue reminder",
+            "send overdue reminder",
+            "nudge overdue",
+            "nudge the overdue",
+            "remind the overdue",
+        )
+    ):
+        action = "nudge_overdue"
 
     if action == "list_pending":
         state["result"] = {
