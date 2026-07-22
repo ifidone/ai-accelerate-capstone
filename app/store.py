@@ -256,8 +256,8 @@ def _checkout_summary(checkout: dict) -> dict:
         "checkout_id": checkout["checkout_id"],
         "item_id": checkout["item_id"],
         "item_name": record.get("name", checkout["item_id"]),
+        "category": record.get("category", "uncategorized"),
 
-        # Display names only for user-facing summaries.
         "student_name": user_display_name(checkout.get("student_id")),
         "approved_by_name": user_display_name(checkout.get("approved_by")),
 
@@ -267,7 +267,9 @@ def _checkout_summary(checkout: dict) -> dict:
         "requested_days": checkout.get("requested_days"),
         "status": checkout.get("status"),
         "notes": checkout.get("notes", ""),
-        "damage_reports": _display_damage_reports(checkout.get("damage_reports", [])),
+        "damage_reports": _display_damage_reports(
+            checkout.get("damage_reports", [])
+        ),
     }
 
 
@@ -959,4 +961,55 @@ def my_current_checkouts(user_id: str) -> list[dict]:
             item.get("due_date") or "9999-12-31",
             item["item_name"].lower(),
         ),
+    )
+
+def my_checkout_history(user_id: str) -> list[dict]:
+    """Return completed or denied checkout records for one user.
+
+    This powers the Checkout History page. It deliberately excludes current
+    pending, active, and overdue records.
+    """
+    history_statuses = ("returned", "denied")
+    items = []
+
+    for checkout in load_checkouts():
+        if checkout["student_id"] != user_id:
+            continue
+
+        if checkout["status"] not in history_statuses:
+            continue
+
+        summary = _checkout_summary(checkout)
+        summary["damage_report_count"] = len(
+            checkout.get("damage_reports", [])
+        )
+
+        checkout_date = checkout.get("checkout_date")
+        return_date = checkout.get("return_date")
+
+        days_held = None
+
+        if checkout_date and return_date:
+            checked_out = datetime.strptime(
+                checkout_date,
+                "%Y-%m-%d",
+            ).date()
+
+            returned = datetime.strptime(
+                return_date,
+                "%Y-%m-%d",
+            ).date()
+
+            days_held = (returned - checked_out).days
+
+        summary["days_held"] = days_held
+        items.append(summary)
+
+    return sorted(
+        items,
+        key=lambda item: (
+            item.get("return_date") or item.get("checkout_date") or "",
+            item["item_name"].lower(),
+        ),
+        reverse=True,
     )

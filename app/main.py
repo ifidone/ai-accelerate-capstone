@@ -125,6 +125,37 @@ def my_checkouts(request: Request):
         },
     }
 
+@app.get("/checkout-history")
+def checkout_history_page():
+    """Show completed and denied checkout records for the signed-in user."""
+    return FileResponse(Path(__file__).parent / "checkout_history.html")
+
+
+@app.get("/api/checkout-history")
+def checkout_history(request: Request):
+    """Return historical checkout records only for the signed-in user."""
+    user = auth.current_user(request)
+
+    items = store.my_checkout_history(user["id"])
+
+    return {
+        "items": items,
+        "summary": {
+            "returned": sum(
+                item["status"] == "returned"
+                for item in items
+            ),
+            "denied": sum(
+                item["status"] == "denied"
+                for item in items
+            ),
+            "damage_reports": sum(
+                item.get("damage_report_count", 0)
+                for item in items
+            ),
+        },
+    }
+
 @app.get("/api/auth/login")
 def google_login(request: Request):
     code_verifier = secrets.token_urlsafe(64)
