@@ -514,6 +514,36 @@
   
       return true;
     }
+
+    async function loadHistory() {
+      const response = await fetch("/api/history", {
+        credentials: "same-origin",
+      });
+
+      if (response.status === 401) {
+        window.location.assign("/api/auth/login");
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error(await readError(response));
+      }
+
+      const history = await response.json();
+
+      if (!Array.isArray(history) || history.length === 0) {
+        return;
+      }
+
+      log.innerHTML = "";
+
+      for (const message of history) {
+        const role = message.role === "assistant" ? "bot" : "user";
+        add(role, message.content || "");
+      }
+
+      log.scrollTop = log.scrollHeight;
+    }
   
     async function send(message) {
       add("user", message);
@@ -592,6 +622,8 @@
         const authenticated = await loadSession();
   
         if (!authenticated) return;
+
+        await loadHistory();
   
         setChatEnabled(true);
         input.focus();

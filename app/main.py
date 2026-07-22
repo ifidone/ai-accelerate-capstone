@@ -14,7 +14,7 @@ from googleapiclient.discovery import build
 from pydantic import BaseModel
 from starlette.middleware.sessions import SessionMiddleware
 
-from . import auth, config, conversation_store, graph, rag, scheduler, user_google_tokens
+from . import auth, config, chat_history, graph, rag, scheduler, user_google_tokens
 
 log = logging.getLogger(__name__)
 
@@ -43,6 +43,7 @@ app.add_middleware(
 
 rag.get_collection()
 scheduler.start()
+chat_history.initialize()
 
 
 @app.on_event("shutdown")
@@ -170,7 +171,6 @@ def google_callback(request: Request):
     user_google_tokens.save(user["id"], flow.credentials)
 
     request.session["user"] = user
-    request.session["conversation_id"] = secrets.token_urlsafe(20)
 
     request.session.pop("oauth_state", None)
     request.session.pop("oauth_code_verifier", None)
@@ -188,21 +188,36 @@ def logout(request: Request):
 def me(request: Request):
     return auth.current_user(request)
 
+@app.get("/api/history")
+def get_history(request: Request):
+    """Return saved history for the authenticated Google user."""
+    user = auth.current_user(request)
+
+    return chat_history.get_display_messages(
+        user_id=user["id"],
+        limit=100,
+    )
+
+
+@app.delete("/api/history")
+def clear_history(request: Request):
+    """Delete only the current user's saved chat history."""
+    user = auth.current_user(request)
+
+    chat_history.clear_messages(user["id"])
+
+    return {"ok": True}
 
 @app.post("/api/chat")
 def chat(req: ChatRequest, request: Request):
     """Run a chat request as the Google-authenticated LabBot user."""
     user = auth.current_user(request)
 
-    conversation_id = request.session.get("conversation_id")
-
-    if not conversation_id:
-        conversation_id = secrets.token_urlsafe(20)
-        request.session["conversation_id"] = conversation_id
-
-    history = conversation_store.get_history(
+    # A bounded history is supplied to the graph for follow-up resolution,
+    # while the UI can display a longer saved history.
+    history = chat_history.get_recent_messages(
         user_id=user["id"],
-        conversation_id=conversation_id,
+        limit=20,
     )
 
     result = graph.run(
@@ -211,11 +226,16 @@ def chat(req: ChatRequest, request: Request):
         history=history,
     )
 
-    conversation_store.append_turn(
+    chat_history.append_message(
         user_id=user["id"],
-        conversation_id=conversation_id,
-        user_message=req.message,
-        assistant_reply=result["reply"],
+        role="user",
+        content=req.message,
+    )
+
+    chat_history.append_message(
+        user_id=user["id"],
+        role="assistant",
+        content=result["reply"],
     )
 
     return result
