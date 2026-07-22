@@ -14,7 +14,7 @@ from googleapiclient.discovery import build
 from pydantic import BaseModel
 from starlette.middleware.sessions import SessionMiddleware
 
-from . import auth, config, chat_history, graph, rag, scheduler, user_google_tokens
+from . import auth, config, chat_history, graph, rag, scheduler, user_google_tokens, store
 
 log = logging.getLogger(__name__)
 
@@ -86,6 +86,21 @@ def google_flow(
 def index():
     return FileResponse(Path(__file__).parent / "index.html")
 
+@app.get("/inventory")
+def inventory_page():
+    """Authenticated inventory browser page."""
+    return FileResponse(Path(__file__).parent / "inventory.html")
+
+@app.get("/api/inventory")
+def inventory(request: Request):
+    """Return inventory records appropriate for the signed-in user."""
+    user = auth.current_user(request)
+
+    return {
+        "items": store.inventory_catalog(
+            include_manager_details=user.get("role") == "lab_manager",
+        )
+    }
 
 @app.get("/api/auth/login")
 def google_login(request: Request):

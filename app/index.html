@@ -124,6 +124,43 @@
       gap: 0.7rem;
     }
 
+    .brand-area {
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+    }
+
+    .main-nav {
+      display: flex;
+      gap: 0.3rem;
+      padding: 0.25rem;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.58);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .nav-link {
+      padding: 0.38rem 0.7rem;
+      border-radius: 999px;
+      color: var(--text-muted);
+      font-size: 0.78rem;
+      font-weight: 650;
+      text-decoration: none;
+      transition: background 120ms ease, color 120ms ease;
+    }
+
+    .nav-link:hover {
+      background: rgba(124, 92, 255, 0.1);
+      color: var(--accent);
+    }
+
+    .nav-link.active {
+      background: white;
+      color: var(--text);
+      box-shadow: var(--shadow-sm);
+    }
+
     .brand .mark {
       display: grid;
       width: 36px;
@@ -497,13 +534,20 @@
 <body>
   <div class="shell">
     <header>
-      <div class="brand">
-        <div class="mark">L</div>
-
-        <div>
-          <h1>LabBot</h1>
-          <span class="tag">Lab equipment, checked out and tracked.</span>
+      <div class="brand-area">
+        <div class="brand">
+          <div class="mark">L</div>
+      
+          <div>
+            <h1>LabBot</h1>
+            <span class="tag">Lab equipment, checked out and tracked.</span>
+          </div>
         </div>
+      
+        <nav class="main-nav" aria-label="Primary navigation">
+          <a class="nav-link active" href="/">Chat</a>
+          <a class="nav-link" href="/inventory">Inventory</a>
+        </nav>
       </div>
 
       <div class="persona">

@@ -873,3 +873,35 @@ def set_calendar_event_ids(checkout_id: str, event_ids: dict) -> None:
             break
 
     save_checkouts(checkouts)
+
+def inventory_catalog(include_manager_details: bool = False) -> list[dict]:
+    """Return inventory data appropriate for the authenticated viewer.
+
+    Students can see equipment identity, category, availability, and checkout
+    limits, but never the identity of another person who has an item checked
+    out. Lab managers also receive operational manager notes.
+    """
+    catalog = []
+
+    for record in load_records():
+        item = {
+            "item_id": record["item_id"],
+            "name": record["name"],
+            "category": record.get("category", "uncategorized"),
+            "status": record.get("status", "unknown"),
+            "checkout_limit_days": record.get("checkout_limit_days"),
+        }
+
+        if include_manager_details:
+            item["manager_note"] = record.get("manager_note", "")
+
+        catalog.append(item)
+
+    return sorted(
+        catalog,
+        key=lambda item: (
+            item["category"].lower(),
+            item["name"].lower(),
+            item["item_id"].lower(),
+        ),
+    )

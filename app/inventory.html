@@ -1,0 +1,838 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1"
+  />
+  <title>LabBot Inventory</title>
+
+  <style>
+    :root {
+      --bg: #fbf7f3;
+      --surface: rgba(255, 255, 255, 0.76);
+      --surface-solid: #ffffff;
+      --border: rgba(20, 20, 40, 0.08);
+      --text: #1a1524;
+      --text-muted: #6b6880;
+      --accent: #7c5cff;
+      --accent-grad: linear-gradient(135deg, #7c5cff 0%, #ff6ea8 100%);
+      --shadow-sm:
+        0 1px 2px rgba(20, 20, 40, 0.04),
+        0 1px 3px rgba(20, 20, 40, 0.06);
+      --shadow-lg: 0 24px 60px -24px rgba(80, 60, 180, 0.28);
+      --radius-lg: 24px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      min-height: 100%;
+    }
+
+    body {
+      display: flex;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+      padding: 2rem 1rem;
+      overflow-x: hidden;
+      position: relative;
+      background: var(--bg);
+      color: var(--text);
+      font-family:
+        -apple-system,
+        BlinkMacSystemFont,
+        "Inter",
+        "Segoe UI",
+        system-ui,
+        sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body::before,
+    body::after {
+      content: "";
+      position: fixed;
+      z-index: -1;
+      border-radius: 50%;
+      filter: blur(80px);
+      opacity: 0.55;
+      pointer-events: none;
+    }
+
+    body::before {
+      top: -140px;
+      left: -120px;
+      width: 480px;
+      height: 480px;
+      background: radial-gradient(circle, #ffb4c8 0%, transparent 70%);
+    }
+
+    body::after {
+      right: -140px;
+      bottom: -180px;
+      width: 540px;
+      height: 540px;
+      background: radial-gradient(circle, #b6a5ff 0%, transparent 70%);
+    }
+
+    .shell {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      width: 100%;
+      max-width: 1040px;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 0.25rem;
+    }
+
+    .brand-area {
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.7rem;
+    }
+
+    .mark {
+      display: grid;
+      width: 36px;
+      height: 36px;
+      place-items: center;
+      border-radius: 12px;
+      background: var(--accent-grad);
+      color: white;
+      font-weight: 800;
+      box-shadow: 0 6px 20px -6px rgba(124, 92, 255, 0.55);
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: 1.05rem;
+      font-weight: 700;
+    }
+
+    .tag {
+      display: block;
+      color: var(--text-muted);
+      font-size: 0.72rem;
+    }
+
+    .main-nav {
+      display: flex;
+      gap: 0.3rem;
+      padding: 0.25rem;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.58);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .nav-link {
+      padding: 0.38rem 0.7rem;
+      border-radius: 999px;
+      color: var(--text-muted);
+      font-size: 0.78rem;
+      font-weight: 650;
+      text-decoration: none;
+    }
+
+    .nav-link:hover {
+      background: rgba(124, 92, 255, 0.1);
+      color: var(--accent);
+    }
+
+    .nav-link.active {
+      background: white;
+      color: var(--text);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .account {
+      display: flex;
+      align-items: center;
+      gap: 0.55rem;
+      max-width: 290px;
+      padding: 0.35rem 0.4rem 0.35rem 0.85rem;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--surface);
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      box-shadow: var(--shadow-sm);
+      backdrop-filter: blur(12px);
+    }
+
+    #signed-in-as {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    #logout {
+      width: auto;
+      height: auto;
+      padding: 0.4rem 0.75rem;
+      border-radius: 999px;
+      background: white;
+      color: var(--text);
+      font: inherit;
+      font-size: 0.76rem;
+      font-weight: 650;
+      box-shadow: var(--shadow-sm);
+    }
+
+    button {
+      border: none;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.55;
+    }
+
+    .page-card {
+      padding: 1.5rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      background: var(--surface);
+      box-shadow: var(--shadow-lg);
+      backdrop-filter: blur(16px);
+    }
+
+    .page-heading {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .page-heading h2 {
+      margin: 0;
+      font-size: 1.55rem;
+      letter-spacing: -0.03em;
+    }
+
+    .page-heading p {
+      margin: 0.35rem 0 0;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    .role-badge {
+      padding: 0.36rem 0.65rem;
+      border-radius: 999px;
+      background: rgba(124, 92, 255, 0.1);
+      color: var(--accent);
+      font-size: 0.76rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 0.75rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .stat-card {
+      padding: 0.9rem;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.64);
+    }
+
+    .stat-card span {
+      display: block;
+      color: var(--text-muted);
+      font-size: 0.76rem;
+      font-weight: 600;
+    }
+
+    .stat-card strong {
+      display: block;
+      margin-top: 0.15rem;
+      font-size: 1.5rem;
+      letter-spacing: -0.04em;
+    }
+
+    .filters {
+      display: grid;
+      grid-template-columns: minmax(0, 2fr) repeat(2, minmax(150px, 1fr));
+      gap: 0.65rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .field {
+      width: 100%;
+      padding: 0.72rem 0.85rem;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      outline: none;
+      background: white;
+      color: var(--text);
+      font: inherit;
+      font-size: 0.9rem;
+    }
+
+    .field:focus {
+      border-color: rgba(124, 92, 255, 0.55);
+      box-shadow: 0 0 0 4px rgba(124, 92, 255, 0.12);
+    }
+
+    .inventory-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 0.8rem;
+    }
+
+    .inventory-card {
+      display: flex;
+      flex-direction: column;
+      min-height: 175px;
+      padding: 1rem;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      background: var(--surface-solid);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .inventory-card-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.6rem;
+    }
+
+    .inventory-card h3 {
+      margin: 0;
+      font-size: 1rem;
+      line-height: 1.3;
+    }
+
+    .item-id {
+      margin: 0.3rem 0 0;
+      color: var(--text-muted);
+      font-family: "SF Mono", "JetBrains Mono", ui-monospace, monospace;
+      font-size: 0.73rem;
+    }
+
+    .status {
+      flex: 0 0 auto;
+      padding: 0.3rem 0.52rem;
+      border-radius: 999px;
+      font-size: 0.7rem;
+      font-weight: 750;
+      text-transform: capitalize;
+    }
+
+    .status.available {
+      background: rgba(71, 230, 193, 0.18);
+      color: #107c62;
+    }
+
+    .status.checked_out {
+      background: rgba(244, 176, 0, 0.18);
+      color: #956300;
+    }
+
+    .status.damaged {
+      background: rgba(244, 50, 86, 0.14);
+      color: #b0203c;
+    }
+
+    .status.under_repair {
+      background: rgba(162, 89, 234, 0.14);
+      color: #7040ae;
+    }
+
+    .status.retired {
+      background: rgba(119, 119, 119, 0.14);
+      color: #5d5d5d;
+    }
+
+    .item-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+      margin-top: auto;
+      padding-top: 1rem;
+    }
+
+    .meta-pill {
+      padding: 0.3rem 0.5rem;
+      border-radius: 999px;
+      background: rgba(20, 20, 40, 0.05);
+      color: var(--text-muted);
+      font-size: 0.72rem;
+    }
+
+    .manager-note {
+      margin-top: 0.8rem;
+      padding-top: 0.7rem;
+      border-top: 1px dashed var(--border);
+      color: var(--text-muted);
+      font-size: 0.76rem;
+      line-height: 1.4;
+    }
+
+    .empty {
+      grid-column: 1 / -1;
+      padding: 2.5rem 1rem;
+      color: var(--text-muted);
+      text-align: center;
+    }
+
+    .error {
+      padding: 1rem;
+      border: 1px solid rgba(244, 50, 86, 0.25);
+      border-radius: 14px;
+      background: rgba(244, 50, 86, 0.07);
+      color: #ad2340;
+    }
+
+    @media (max-width: 820px) {
+      header {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .inventory-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 560px) {
+      body {
+        padding: 1rem 0.75rem;
+      }
+
+      .brand-area {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 0.65rem;
+      }
+
+      .filters {
+        grid-template-columns: 1fr;
+      }
+
+      .inventory-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .page-card {
+        padding: 1rem;
+      }
+
+      .page-heading {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="shell">
+    <header>
+      <div class="brand-area">
+        <div class="brand">
+          <div class="mark">L</div>
+
+          <div>
+            <h1>LabBot</h1>
+            <span class="tag">Lab equipment, checked out and tracked.</span>
+          </div>
+        </div>
+
+        <nav class="main-nav" aria-label="Primary navigation">
+          <a class="nav-link" href="/">Chat</a>
+          <a class="nav-link active" href="/inventory">Inventory</a>
+        </nav>
+      </div>
+
+      <div class="account">
+        <span id="signed-in-as">Checking sign-in…</span>
+        <button id="logout" type="button">Log out</button>
+      </div>
+    </header>
+
+    <main class="page-card">
+      <section class="page-heading">
+        <div>
+          <h2>Equipment inventory</h2>
+          <p>
+            Search shared lab equipment and filter by availability or category.
+          </p>
+        </div>
+
+        <span id="role-badge" class="role-badge">Loading role…</span>
+      </section>
+
+      <section class="stats" aria-label="Inventory summary">
+        <div class="stat-card">
+          <span>Total equipment</span>
+          <strong id="total-count">–</strong>
+        </div>
+
+        <div class="stat-card">
+          <span>Available now</span>
+          <strong id="available-count">–</strong>
+        </div>
+
+        <div class="stat-card">
+          <span>Checked out</span>
+          <strong id="checked-out-count">–</strong>
+        </div>
+
+        <div class="stat-card">
+          <span>Unavailable / repair</span>
+          <strong id="unavailable-count">–</strong>
+        </div>
+      </section>
+
+      <section class="filters" aria-label="Inventory filters">
+        <input
+          id="search"
+          class="field"
+          type="search"
+          placeholder="Search equipment, category, or item ID…"
+          autocomplete="off"
+        />
+
+        <select id="status-filter" class="field" aria-label="Filter by status">
+          <option value="all">All statuses</option>
+          <option value="available">Available</option>
+          <option value="checked_out">Checked out</option>
+          <option value="under_repair">Under repair</option>
+          <option value="damaged">Damaged</option>
+          <option value="retired">Retired</option>
+        </select>
+
+        <select
+          id="category-filter"
+          class="field"
+          aria-label="Filter by category"
+        >
+          <option value="all">All categories</option>
+        </select>
+      </section>
+
+      <section
+        id="inventory-grid"
+        class="inventory-grid"
+        aria-live="polite"
+      >
+        <div class="empty">Loading inventory…</div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const signedInAs = document.getElementById("signed-in-as");
+    const roleBadge = document.getElementById("role-badge");
+    const logoutBtn = document.getElementById("logout");
+
+    const searchInput = document.getElementById("search");
+    const statusFilter = document.getElementById("status-filter");
+    const categoryFilter = document.getElementById("category-filter");
+    const inventoryGrid = document.getElementById("inventory-grid");
+
+    const totalCount = document.getElementById("total-count");
+    const availableCount = document.getElementById("available-count");
+    const checkedOutCount = document.getElementById("checked-out-count");
+    const unavailableCount = document.getElementById("unavailable-count");
+
+    let currentUser = null;
+    let inventory = [];
+
+    function prettyStatus(status) {
+      return String(status || "unknown")
+        .replaceAll("_", " ")
+        .replace(/\b\w/g, letter => letter.toUpperCase());
+    }
+
+    function prettyCategory(category) {
+      return String(category || "uncategorized")
+        .replaceAll("_", " ")
+        .replace(/\b\w/g, letter => letter.toUpperCase());
+    }
+
+    async function readError(response) {
+      const text = await response.text();
+
+      try {
+        const parsed = JSON.parse(text);
+        return parsed.detail || parsed.message || text;
+      } catch {
+        return text || `Request failed with status ${response.status}.`;
+      }
+    }
+
+    async function loadSession() {
+      const response = await fetch("/api/me", {
+        credentials: "same-origin",
+      });
+
+      if (response.status === 401) {
+        window.location.assign("/api/auth/login");
+        return false;
+      }
+
+      if (!response.ok) {
+        throw new Error(await readError(response));
+      }
+
+      currentUser = await response.json();
+
+      const displayName = currentUser.name || currentUser.email;
+      const role = currentUser.role === "lab_manager"
+        ? "Lab Manager"
+        : "Student";
+
+      signedInAs.textContent = `${displayName} (${role})`;
+      roleBadge.textContent = role;
+
+      return true;
+    }
+
+    function populateCategories(items) {
+      const previous = categoryFilter.value;
+      const categories = [
+        ...new Set(items.map(item => item.category).filter(Boolean)),
+      ].sort();
+
+      categoryFilter.innerHTML = `
+        <option value="all">All categories</option>
+      `;
+
+      for (const category of categories) {
+        const option = document.createElement("option");
+        option.value = category;
+        option.textContent = prettyCategory(category);
+        categoryFilter.appendChild(option);
+      }
+
+      if (
+        previous === "all"
+        || categories.includes(previous)
+      ) {
+        categoryFilter.value = previous;
+      }
+    }
+
+    function updateStats(items) {
+      const total = items.length;
+      const available = items.filter(
+        item => item.status === "available",
+      ).length;
+      const checkedOut = items.filter(
+        item => item.status === "checked_out",
+      ).length;
+      const unavailable = total - available - checkedOut;
+
+      totalCount.textContent = total;
+      availableCount.textContent = available;
+      checkedOutCount.textContent = checkedOut;
+      unavailableCount.textContent = unavailable;
+    }
+
+    function filteredInventory() {
+      const search = searchInput.value.trim().toLowerCase();
+      const selectedStatus = statusFilter.value;
+      const selectedCategory = categoryFilter.value;
+
+      return inventory.filter(item => {
+        const searchable = [
+          item.name,
+          item.item_id,
+          item.category,
+          item.status,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+
+        const matchesSearch = !search || searchable.includes(search);
+        const matchesStatus = (
+          selectedStatus === "all"
+          || item.status === selectedStatus
+        );
+        const matchesCategory = (
+          selectedCategory === "all"
+          || item.category === selectedCategory
+        );
+
+        return matchesSearch && matchesStatus && matchesCategory;
+      });
+    }
+
+    function renderInventory() {
+      const items = filteredInventory();
+      inventoryGrid.innerHTML = "";
+
+      if (items.length === 0) {
+        const empty = document.createElement("div");
+        empty.className = "empty";
+        empty.textContent = "No equipment matches your current filters.";
+        inventoryGrid.appendChild(empty);
+        return;
+      }
+
+      for (const item of items) {
+        const card = document.createElement("article");
+        card.className = "inventory-card";
+
+        const top = document.createElement("div");
+        top.className = "inventory-card-top";
+
+        const titleArea = document.createElement("div");
+
+        const title = document.createElement("h3");
+        title.textContent = item.name;
+
+        const itemId = document.createElement("p");
+        itemId.className = "item-id";
+        itemId.textContent = item.item_id;
+
+        titleArea.append(title, itemId);
+
+        const status = document.createElement("span");
+        status.className = `status ${item.status}`;
+        status.textContent = prettyStatus(item.status);
+
+        top.append(titleArea, status);
+
+        const meta = document.createElement("div");
+        meta.className = "item-meta";
+
+        const category = document.createElement("span");
+        category.className = "meta-pill";
+        category.textContent = prettyCategory(item.category);
+
+        const limit = document.createElement("span");
+        limit.className = "meta-pill";
+        limit.textContent = item.checkout_limit_days
+          ? `Up to ${item.checkout_limit_days} days`
+          : "No checkout limit set";
+
+        meta.append(category, limit);
+
+        card.append(top, meta);
+
+        if (
+          currentUser?.role === "lab_manager"
+          && item.manager_note
+        ) {
+          const managerNote = document.createElement("div");
+          managerNote.className = "manager-note";
+          managerNote.textContent = `Manager note: ${item.manager_note}`;
+          card.appendChild(managerNote);
+        }
+
+        inventoryGrid.appendChild(card);
+      }
+    }
+
+    async function loadInventory() {
+      const response = await fetch("/api/inventory", {
+        credentials: "same-origin",
+      });
+
+      if (response.status === 401) {
+        window.location.assign("/api/auth/login");
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error(await readError(response));
+      }
+
+      const payload = await response.json();
+      inventory = Array.isArray(payload.items) ? payload.items : [];
+
+      updateStats(inventory);
+      populateCategories(inventory);
+      renderInventory();
+    }
+
+    function showInventoryError(message) {
+      inventoryGrid.innerHTML = "";
+
+      const error = document.createElement("div");
+      error.className = "error";
+      error.textContent = message;
+
+      inventoryGrid.appendChild(error);
+    }
+
+    for (const control of [
+      searchInput,
+      statusFilter,
+      categoryFilter,
+    ]) {
+      control.addEventListener("input", renderInventory);
+      control.addEventListener("change", renderInventory);
+    }
+
+    logoutBtn.addEventListener("click", async () => {
+      logoutBtn.disabled = true;
+
+      try {
+        await fetch("/api/auth/logout", {
+          method: "POST",
+          credentials: "same-origin",
+        });
+      } finally {
+        window.location.assign("/");
+      }
+    });
+
+    async function initialize() {
+      try {
+        const authenticated = await loadSession();
+
+        if (!authenticated) {
+          return;
+        }
+
+        await loadInventory();
+      } catch (error) {
+        signedInAs.textContent = "Session unavailable";
+        roleBadge.textContent = "Unavailable";
+
+        showInventoryError(
+          `Could not load inventory: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        );
+      }
+    }
+
+    initialize();
+  </script>
+</body>
+</html>
