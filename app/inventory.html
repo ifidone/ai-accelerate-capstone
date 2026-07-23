@@ -471,8 +471,31 @@
         <nav class="main-nav" aria-label="Primary navigation">
           <a class="nav-link" href="/">Chat</a>
           <a class="nav-link active" href="/inventory">Inventory</a>
-          <a class="nav-link" href="/my-checkouts">My checkouts</a>
-          <a class="nav-link" href="/checkout-history">History</a>
+        
+          <a
+            id="nav-my-checkouts"
+            class="nav-link"
+            href="/my-checkouts"
+          >
+            My checkouts
+          </a>
+        
+          <a
+            id="nav-history"
+            class="nav-link"
+            href="/checkout-history"
+          >
+            History
+          </a>
+        
+          <a
+            id="nav-request-queue"
+            class="nav-link"
+            href="/manager/requests"
+            hidden
+          >
+            Request queue
+          </a>
         </nav>
       </div>
 
@@ -568,6 +591,10 @@
     const checkedOutCount = document.getElementById("checked-out-count");
     const unavailableCount = document.getElementById("unavailable-count");
 
+    const navMyCheckouts = document.getElementById("nav-my-checkouts");
+    const navHistory = document.getElementById("nav-history");
+    const navRequestQueue = document.getElementById("nav-request-queue");
+
     let currentUser = null;
     let inventory = [];
 
@@ -616,6 +643,11 @@
         : "Student";
 
       signedInAs.textContent = `${displayName} (${role})`;
+      const isManager = currentUser.role === "lab_manager";
+
+      navMyCheckouts.hidden = isManager;
+      navHistory.hidden = isManager;
+      navRequestQueue.hidden = !isManager;
       roleBadge.textContent = role;
 
       return true;

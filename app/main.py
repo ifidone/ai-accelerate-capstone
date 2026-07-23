@@ -14,7 +14,8 @@ from googleapiclient.discovery import build
 from pydantic import BaseModel
 from starlette.middleware.sessions import SessionMiddleware
 
-from . import auth, config, chat_history, graph, rag, scheduler, user_google_tokens, store
+from . import auth, config, chat_history, checkout_actions
+from . import graph, rag, scheduler, user_google_tokens, store
 
 log = logging.getLogger(__name__)
 
@@ -54,6 +55,19 @@ def shutdown() -> None:
 class ChatRequest(BaseModel):
     message: str
 
+class ManagerDecisionRequest(BaseModel):
+    note: str = ""
+
+def require_manager(request: Request) -> dict:
+    user = auth.current_user(request)
+
+    if user.get("role") != "lab_manager":
+        raise HTTPException(
+            status_code=403,
+            detail="Only a lab manager can perform that action.",
+        )
+
+    return user
 
 def google_flow(
     state: str | None = None,
@@ -103,15 +117,24 @@ def inventory(request: Request):
     }
 
 @app.get("/my-checkouts")
-def my_checkouts_page():
-    """Show the authenticated user's current checkout dashboard."""
+def my_checkouts_page(request: Request):
+    user = auth.current_user(request)
+
+    if user.get("role") == "lab_manager":
+        return RedirectResponse("/manager/requests", status_code=303)
+
     return FileResponse(Path(__file__).parent / "my_checkouts.html")
 
 
 @app.get("/api/my-checkouts")
 def my_checkouts(request: Request):
-    """Return current requests/checkouts for the signed-in user only."""
     user = auth.current_user(request)
+
+    if user.get("role") == "lab_manager":
+        raise HTTPException(
+            status_code=403,
+            detail="Lab managers use the request queue instead.",
+        )
 
     items = store.my_current_checkouts(user["id"])
 
@@ -126,29 +149,31 @@ def my_checkouts(request: Request):
     }
 
 @app.get("/checkout-history")
-def checkout_history_page():
-    """Show completed and denied checkout records for the signed-in user."""
-    return FileResponse(Path(__file__).parent / "checkout_history.html")
+def checkout_history_page(request: Request):
+    user = auth.current_user(request)
 
+    if user.get("role") == "lab_manager":
+        return RedirectResponse("/manager/requests", status_code=303)
+
+    return FileResponse(Path(__file__).parent / "checkout_history.html")
 
 @app.get("/api/checkout-history")
 def checkout_history(request: Request):
-    """Return historical checkout records only for the signed-in user."""
     user = auth.current_user(request)
+
+    if user.get("role") == "lab_manager":
+        raise HTTPException(
+            status_code=403,
+            detail="Lab managers use the request queue instead.",
+        )
 
     items = store.my_checkout_history(user["id"])
 
     return {
         "items": items,
         "summary": {
-            "returned": sum(
-                item["status"] == "returned"
-                for item in items
-            ),
-            "denied": sum(
-                item["status"] == "denied"
-                for item in items
-            ),
+            "returned": sum(item["status"] == "returned" for item in items),
+            "denied": sum(item["status"] == "denied" for item in items),
             "damage_reports": sum(
                 item.get("damage_report_count", 0)
                 for item in items
@@ -276,6 +301,50 @@ def clear_history(request: Request):
     chat_history.clear_messages(user["id"])
 
     return {"ok": True}
+
+@app.get("/manager/requests")
+def manager_requests_page(request: Request):
+    require_manager(request)
+    return FileResponse(Path(__file__).parent / "manager_requests.html")
+
+@app.get("/api/manager/requests")
+def manager_requests(request: Request):
+    require_manager(request)
+
+    return {
+        "requests": store.pending_checkouts(),
+        "summary": {
+            "pending": len(store.pending_checkouts()),
+        },
+    }
+
+@app.post("/api/manager/requests/{checkout_id}/approve")
+def approve_manager_request(
+    checkout_id: str,
+    body: ManagerDecisionRequest,
+    request: Request,
+):
+    manager = require_manager(request)
+
+    return checkout_actions.approve_checkout_request(
+        checkout_id=checkout_id,
+        manager_id=manager["id"],
+        manager_note=body.note.strip(),
+    )
+
+@app.post("/api/manager/requests/{checkout_id}/deny")
+def deny_manager_request(
+    checkout_id: str,
+    body: ManagerDecisionRequest,
+    request: Request,
+):
+    manager = require_manager(request)
+
+    return checkout_actions.deny_checkout_request(
+        checkout_id=checkout_id,
+        manager_id=manager["id"],
+        manager_note=body.note.strip(),
+    )
 
 @app.post("/api/chat")
 def chat(req: ChatRequest, request: Request):

@@ -13,7 +13,7 @@ from typing import Optional, TypedDict
 
 from langgraph.graph import END, START, StateGraph
 
-from . import calendar_client, gmail_client, llm, rag, store
+from . import calendar_client, checkout_actions, gmail_client, llm, rag, store
 
 
 INTENTS = [
@@ -542,67 +542,34 @@ def manager_node(state: AgentState) -> AgentState:
         }
         return state
 
-    if action in ("approve", "deny"):
+    if action == "approve":
         if not checkout_id:
             state["result"] = {
                 "ok": False,
-                "reason": "Please provide the checkout ID to approve or deny.",
+                "reason": "Please provide the checkout ID to approve.",
             }
             return state
 
-        result = store.approve_or_deny(
+        state["result"] = checkout_actions.approve_checkout_request(
             checkout_id=checkout_id,
-            decision=action,
             manager_id=user["id"],
             manager_note=note,
         )
+        return state
 
-        result["action"] = action
+    if action == "deny":
+        if not checkout_id:
+            state["result"] = {
+                "ok": False,
+                "reason": "Please provide the checkout ID to deny.",
+            }
+            return state
 
-        if result.get("ok") and action == "approve":
-            # The approval result contains a display summary. Reload the
-            # raw checkout record to obtain the internal student ID needed
-            # to use their saved Google Calendar credentials.
-            checkout_summary = result["checkout"]
-            raw_checkout = store.find_checkout(
-                checkout_summary["checkout_id"]
-            )
-
-            if raw_checkout:
-                calendar = calendar_client.create_checkout_events(
-                    student_user_id=raw_checkout["student_id"],
-                    item_name=result["item_name"],
-                    due_date=raw_checkout["due_date"],
-                    checkout_id=raw_checkout["checkout_id"],
-                )
-
-                result["calendar"] = calendar
-
-                # Persist IDs even when only one Calendar target succeeds.
-                # The return path can then remove any event that exists.
-                store.set_calendar_event_ids(
-                    checkout_id=raw_checkout["checkout_id"],
-                    event_ids=calendar.get("event_ids", {}),
-                )
-            else:
-                result["calendar"] = {
-                    "ok": False,
-                    "reason": (
-                        "The request was approved, but LabBot could not reload "
-                        "it for Calendar synchronization."
-                    ),
-                }
-
-            # This is sent from the LabBot automation Gmail account to the
-            # student's email address stored in users.json.
-            result["email"] = gmail_client.send_checkout_confirmation(
-                user=result.get("student"),
-                item_name=result["item_name"],
-                due_date=checkout_summary["due_date"],
-                checkout_id=checkout_summary["checkout_id"],
-            )
-
-        state["result"] = result
+        state["result"] = checkout_actions.deny_checkout_request(
+            checkout_id=checkout_id,
+            manager_id=user["id"],
+            manager_note=note,
+        )
         return state
 
     if action == "nudge_overdue":

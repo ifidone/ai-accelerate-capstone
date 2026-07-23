@@ -549,8 +549,31 @@
         <nav class="main-nav" aria-label="Primary navigation">
           <a class="nav-link active" href="/">Chat</a>
           <a class="nav-link" href="/inventory">Inventory</a>
-          <a class="nav-link" href="/my-checkouts">My checkouts</a>
-          <a class="nav-link" href="/checkout-history">History</a>
+        
+          <a
+            id="nav-my-checkouts"
+            class="nav-link"
+            href="/my-checkouts"
+          >
+            My checkouts
+          </a>
+        
+          <a
+            id="nav-history"
+            class="nav-link"
+            href="/checkout-history"
+          >
+            History
+          </a>
+        
+          <a
+            id="nav-request-queue"
+            class="nav-link"
+            href="/manager/requests"
+            hidden
+          >
+            Request queue
+          </a>
         </nav>
       </div>
 
@@ -625,6 +648,10 @@
     const signedInAs = document.getElementById("signed-in-as");
     const logoutBtn = document.getElementById("logout");
     const clearHistoryBtn = document.getElementById("clear-history");
+
+    const navMyCheckouts = document.getElementById("nav-my-checkouts");
+    const navHistory = document.getElementById("nav-history");
+    const navRequestQueue = document.getElementById("nav-request-queue");
 
     let currentUser = null;
 
@@ -797,6 +824,11 @@
         : "Student";
 
       signedInAs.textContent = `${displayName} (${role})`;
+      const isManager = currentUser.role === "lab_manager";
+
+      navMyCheckouts.hidden = isManager;
+      navHistory.hidden = isManager;
+      navRequestQueue.hidden = !isManager;
 
       return true;
     }
