@@ -1,0 +1,968 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Damage Queue · LabBot</title>
+
+  <style>
+    :root {
+      --bg: #fbf7f3;
+      --surface: rgba(255, 255, 255, 0.76);
+      --border: rgba(20, 20, 40, 0.08);
+      --text: #1a1524;
+      --text-muted: #6b6880;
+      --accent: #7c5cff;
+      --accent-grad: linear-gradient(135deg, #7c5cff 0%, #ff6ea8 100%);
+      --green: #16876c;
+      --green-bg: rgba(71, 230, 193, 0.18);
+      --red: #c92e4b;
+      --red-bg: rgba(244, 50, 86, 0.1);
+      --yellow: #9c6700;
+      --yellow-bg: rgba(244, 176, 0, 0.18);
+      --purple: #7040ae;
+      --purple-bg: rgba(162, 89, 234, 0.14);
+      --shadow-sm: 0 1px 3px rgba(20, 20, 40, 0.08);
+      --shadow-lg: 0 24px 60px -24px rgba(80, 60, 180, 0.28);
+      --radius-lg: 24px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      display: flex;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+      padding: 2rem 1rem;
+      overflow-x: hidden;
+      position: relative;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", system-ui, sans-serif;
+    }
+
+    body::before,
+    body::after {
+      content: "";
+      position: fixed;
+      z-index: -1;
+      border-radius: 50%;
+      filter: blur(80px);
+      opacity: 0.55;
+      pointer-events: none;
+    }
+
+    body::before {
+      top: -140px;
+      left: -120px;
+      width: 480px;
+      height: 480px;
+      background: radial-gradient(circle, #ffb4c8 0%, transparent 70%);
+    }
+
+    body::after {
+      right: -140px;
+      bottom: -180px;
+      width: 540px;
+      height: 540px;
+      background: radial-gradient(circle, #b6a5ff 0%, transparent 70%);
+    }
+
+    .shell {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      width: 100%;
+      max-width: 1040px;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 0.25rem;
+    }
+
+    .brand-area,
+    .brand,
+    .main-nav,
+    .account {
+      display: flex;
+      align-items: center;
+    }
+
+    .brand-area { gap: 1.25rem; }
+    .brand { gap: 0.7rem; }
+
+    .mark {
+      display: grid;
+      width: 36px;
+      height: 36px;
+      place-items: center;
+      border-radius: 12px;
+      background: var(--accent-grad);
+      color: white;
+      font-weight: 800;
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: 1.05rem;
+    }
+
+    .tag {
+      display: block;
+      color: var(--text-muted);
+      font-size: 0.72rem;
+    }
+
+    .main-nav {
+      gap: 0.3rem;
+      padding: 0.25rem;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.58);
+      box-shadow: var(--shadow-sm);
+      flex-wrap: nowrap;
+    }
+
+    .nav-link {
+      padding: 0.38rem 0.7rem;
+      border-radius: 999px;
+      color: var(--text-muted);
+      font-size: 0.78rem;
+      font-weight: 650;
+      text-decoration: none;
+      white-space: nowrap;
+      padding: 0.38rem 0.55rem;
+      font-size: 0.74rem;
+    }
+
+    .nav-link.active {
+      background: white;
+      color: var(--text);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .account {
+      gap: 0.55rem;
+      max-width: 290px;
+      padding: 0.35rem 0.4rem 0.35rem 0.85rem;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--surface);
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      box-shadow: var(--shadow-sm);
+    }
+
+    #signed-in-as {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    button {
+      border: none;
+      cursor: pointer;
+      font: inherit;
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.55;
+    }
+
+    #logout {
+      padding: 0.4rem 0.75rem;
+      border-radius: 999px;
+      background: white;
+      color: var(--text);
+      font-size: 0.76rem;
+      font-weight: 650;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .page-card {
+      padding: 1.5rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      background: var(--surface);
+      box-shadow: var(--shadow-lg);
+      backdrop-filter: blur(16px);
+    }
+
+    .heading {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 1.25rem;
+    }
+
+    h2 {
+      margin: 0;
+      font-size: 1.55rem;
+      letter-spacing: -0.03em;
+    }
+
+    .heading p {
+      margin: 0.35rem 0 0;
+      color: var(--text-muted);
+    }
+
+    .badge {
+      padding: 0.36rem 0.65rem;
+      border-radius: 999px;
+      background: rgba(124, 92, 255, 0.1);
+      color: var(--accent);
+      font-size: 0.76rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
+
+    .summary-card {
+      padding: 0.85rem;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: white;
+    }
+
+    .summary-card span {
+      display: block;
+      color: var(--text-muted);
+      font-size: 0.74rem;
+      font-weight: 650;
+    }
+
+    .summary-card strong {
+      display: block;
+      margin-top: 0.2rem;
+      font-size: 1.4rem;
+    }
+
+    .filters {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 1rem;
+    }
+
+    .field {
+      min-width: 180px;
+      padding: 0.7rem 0.85rem;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: white;
+      color: var(--text);
+      font: inherit;
+    }
+
+    .report-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .report-card {
+      padding: 1rem;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      background: white;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .report-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 1rem;
+    }
+
+    .report-card h3 {
+      margin: 0;
+      font-size: 1.02rem;
+    }
+
+    .report-id {
+      margin: 0.25rem 0 0;
+      color: var(--text-muted);
+      font-family: "SF Mono", "JetBrains Mono", ui-monospace, monospace;
+      font-size: 0.72rem;
+    }
+
+    .status {
+      padding: 0.3rem 0.55rem;
+      border-radius: 999px;
+      font-size: 0.7rem;
+      font-weight: 750;
+      text-transform: capitalize;
+    }
+
+    .status.open {
+      background: var(--red-bg);
+      color: var(--red);
+    }
+
+    .status.reviewed {
+      background: var(--yellow-bg);
+      color: var(--yellow);
+    }
+
+    .status.resolved {
+      background: var(--green-bg);
+      color: var(--green);
+    }
+
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+      margin-top: 0.8rem;
+    }
+
+    .pill {
+      padding: 0.32rem 0.52rem;
+      border-radius: 999px;
+      background: rgba(20, 20, 40, 0.05);
+      color: var(--text-muted);
+      font-size: 0.74rem;
+    }
+
+    .description {
+      margin: 0.85rem 0;
+      padding: 0.8rem;
+      border-radius: 12px;
+      background: rgba(20, 20, 40, 0.035);
+      color: var(--text);
+      line-height: 1.45;
+    }
+
+    .manager-note {
+      margin-top: 0.75rem;
+      padding-top: 0.75rem;
+      border-top: 1px dashed var(--border);
+      color: var(--text-muted);
+      font-size: 0.8rem;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 0.9rem;
+    }
+
+    .action-button {
+      padding: 0.55rem 0.72rem;
+      border-radius: 10px;
+      font-size: 0.78rem;
+      font-weight: 700;
+    }
+
+    .review {
+      background: var(--yellow-bg);
+      color: var(--yellow);
+    }
+
+    .repair {
+      background: var(--purple-bg);
+      color: var(--purple);
+    }
+
+    .damaged {
+      background: var(--red-bg);
+      color: var(--red);
+    }
+
+    .resolved {
+      background: var(--green-bg);
+      color: var(--green);
+    }
+
+    .notice {
+      margin-top: 0.75rem;
+      padding: 0.75rem;
+      border-radius: 12px;
+      font-size: 0.82rem;
+    }
+
+    .notice.success {
+      background: var(--green-bg);
+      color: var(--green);
+    }
+
+    .notice.error {
+      background: var(--red-bg);
+      color: var(--red);
+    }
+
+    .empty,
+    .error {
+      padding: 2.8rem 1rem;
+      border-radius: 14px;
+      text-align: center;
+    }
+
+    .empty {
+      color: var(--text-muted);
+    }
+
+    .empty strong {
+      display: block;
+      margin-bottom: 0.4rem;
+      color: var(--text);
+      font-size: 1.05rem;
+    }
+
+    .error {
+      background: var(--red-bg);
+      color: var(--red);
+    }
+
+    @media (max-width: 820px) {
+      header {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 560px) {
+      body { padding: 1rem 0.75rem; }
+
+      .brand-area,
+      .heading,
+      .report-top {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 0.65rem;
+      }
+
+      .main-nav {
+        flex-wrap: wrap;
+      }
+
+      .page-card {
+        padding: 1rem;
+      }
+
+      .summary {
+        grid-template-columns: 1fr;
+      }
+
+      .filters,
+      .field {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="shell">
+    <header>
+      <div class="brand-area">
+        <div class="brand">
+          <div class="mark">L</div>
+          <div>
+            <h1>LabBot</h1>
+            <span class="tag">Lab equipment, checked out and tracked.</span>
+          </div>
+        </div>
+
+        <nav class="main-nav" aria-label="Primary navigation">
+          <a class="nav-link" href="/">Chat</a>
+          <a class="nav-link" href="/inventory">Inventory</a>
+          <a class="nav-link" href="/manager">Dashboard</a>
+          <a 
+            class="nav-link" 
+            href="/manager/requests"
+            title="Request Queue">Request
+          </a>
+          <a 
+            class="nav-link active" 
+            href="/manager/damage-reports"
+            title="Damage Queue">Damage
+          </a>
+        </nav>
+      </div>
+
+      <div class="account">
+        <span id="signed-in-as">Checking sign-in…</span>
+        <button id="logout" type="button">Log out</button>
+      </div>
+    </header>
+
+    <main class="page-card">
+      <section class="heading">
+        <div>
+          <h2>Damage queue</h2>
+          <p>Review student-reported equipment issues and update their operational status.</p>
+        </div>
+
+        <span class="badge">Lab Manager</span>
+      </section>
+
+      <section class="summary">
+        <div class="summary-card">
+          <span>Total reports</span>
+          <strong id="total-count">–</strong>
+        </div>
+
+        <div class="summary-card">
+          <span>Open</span>
+          <strong id="open-count">–</strong>
+        </div>
+
+        <div class="summary-card">
+          <span>Reviewed</span>
+          <strong id="reviewed-count">–</strong>
+        </div>
+
+        <div class="summary-card">
+          <span>Resolved</span>
+          <strong id="resolved-count">–</strong>
+        </div>
+      </section>
+
+      <section class="filters">
+        <select id="status-filter" class="field">
+          <option value="all">All report statuses</option>
+          <option value="open">Open</option>
+          <option value="reviewed">Reviewed</option>
+          <option value="resolved">Resolved</option>
+        </select>
+      </section>
+
+      <section id="report-list" class="report-list" aria-live="polite">
+        <div class="empty">Loading damage reports…</div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const signedInAs = document.getElementById("signed-in-as");
+    const logoutBtn = document.getElementById("logout");
+    const statusFilter = document.getElementById("status-filter");
+    const reportList = document.getElementById("report-list");
+
+    const totalCount = document.getElementById("total-count");
+    const openCount = document.getElementById("open-count");
+    const reviewedCount = document.getElementById("reviewed-count");
+    const resolvedCount = document.getElementById("resolved-count");
+
+    let reports = [];
+
+    function formatDate(value) {
+      if (!value) return "Not set";
+
+      const parsed = new Date(`${value}T12:00:00`);
+
+      if (Number.isNaN(parsed.getTime())) return value;
+
+      return new Intl.DateTimeFormat(
+        "en-US",
+        {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        },
+      ).format(parsed);
+    }
+
+    async function readError(response) {
+      const text = await response.text();
+
+      try {
+        const parsed = JSON.parse(text);
+        return parsed.detail || parsed.message || text;
+      } catch {
+        return text || `Request failed with status ${response.status}.`;
+      }
+    }
+
+    async function loadSession() {
+      const response = await fetch("/api/me", {
+        credentials: "same-origin",
+      });
+
+      if (response.status === 401) {
+        window.location.assign("/api/auth/login");
+        return false;
+      }
+
+      if (!response.ok) {
+        throw new Error(await readError(response));
+      }
+
+      const user = await response.json();
+
+      if (user.role !== "lab_manager") {
+        window.location.assign("/");
+        return false;
+      }
+
+      signedInAs.textContent = `${user.name} (Lab Manager)`;
+      return true;
+    }
+
+    function updateSummary(summary) {
+      totalCount.textContent = summary.total ?? 0;
+      openCount.textContent = summary.open ?? 0;
+      reviewedCount.textContent = summary.reviewed ?? 0;
+      resolvedCount.textContent = summary.resolved ?? 0;
+    }
+
+    function filteredReports() {
+      if (statusFilter.value === "all") {
+        return reports;
+      }
+
+      return reports.filter(
+        report => report.status === statusFilter.value,
+      );
+    }
+
+    function createPill(text) {
+      const pill = document.createElement("span");
+      pill.className = "pill";
+      pill.textContent = text;
+      return pill;
+    }
+
+    function showNotice(card, type, message) {
+      const oldNotice = card.querySelector(".notice");
+
+      if (oldNotice) {
+        oldNotice.remove();
+      }
+
+      const notice = document.createElement("div");
+      notice.className = `notice ${type}`;
+      notice.textContent = message;
+
+      card.appendChild(notice);
+    }
+
+    async function reviewReport(report, status, card) {
+      const label = status === "resolved"
+        ? "Resolution note"
+        : "Manager review note";
+
+      const note = window.prompt(label, report.manager_note || "") ?? "";
+
+      const buttons = card.querySelectorAll("button");
+      buttons.forEach(button => {
+        button.disabled = true;
+      });
+
+      try {
+        const response = await fetch(
+          `/api/manager/damage-reports/${encodeURIComponent(
+            report.report_id,
+          )}/review`,
+          {
+            method: "POST",
+            credentials: "same-origin",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ status, note }),
+          },
+        );
+
+        if (!response.ok) {
+          throw new Error(await readError(response));
+        }
+
+        const result = await response.json();
+
+        if (!result.ok) {
+          showNotice(card, "error", result.reason || "Could not update report.");
+          buttons.forEach(button => {
+            button.disabled = false;
+          });
+          return;
+        }
+
+        showNotice(
+          card,
+          "success",
+          `Damage report marked ${status}.`,
+        );
+
+        window.setTimeout(loadReports, 600);
+      } catch (error) {
+        showNotice(
+          card,
+          "error",
+          error instanceof Error ? error.message : String(error),
+        );
+
+        buttons.forEach(button => {
+          button.disabled = false;
+        });
+      }
+    }
+
+    async function updateCondition(report, newStatus, card) {
+      const note = window.prompt(
+        `Optional note for marking this item ${newStatus.replaceAll("_", " ")}`,
+        "",
+      ) ?? "";
+
+      const buttons = card.querySelectorAll("button");
+      buttons.forEach(button => {
+        button.disabled = true;
+      });
+
+      try {
+        const response = await fetch(
+          `/api/manager/inventory/${encodeURIComponent(
+            report.item_id,
+          )}/condition`,
+          {
+            method: "POST",
+            credentials: "same-origin",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              status: newStatus,
+              note,
+            }),
+          },
+        );
+
+        if (!response.ok) {
+          throw new Error(await readError(response));
+        }
+
+        const result = await response.json();
+
+        if (!result.ok) {
+          showNotice(card, "error", result.reason || "Could not update item.");
+          buttons.forEach(button => {
+            button.disabled = false;
+          });
+          return;
+        }
+
+        showNotice(
+          card,
+          "success",
+          `${report.item_name} marked ${newStatus.replaceAll("_", " ")}.`,
+        );
+
+        window.setTimeout(loadReports, 600);
+      } catch (error) {
+        showNotice(
+          card,
+          "error",
+          error instanceof Error ? error.message : String(error),
+        );
+
+        buttons.forEach(button => {
+          button.disabled = false;
+        });
+      }
+    }
+
+    function renderReports() {
+      const visibleReports = filteredReports();
+      reportList.innerHTML = "";
+
+      if (visibleReports.length === 0) {
+        const empty = document.createElement("div");
+        empty.className = "empty";
+
+        const title = document.createElement("strong");
+        title.textContent = "No matching damage reports.";
+
+        const body = document.createElement("span");
+        body.textContent = (
+          reports.length === 0
+            ? "Student-reported equipment issues will appear here."
+            : "Try selecting a different report status."
+        );
+
+        empty.append(title, body);
+        reportList.appendChild(empty);
+        return;
+      }
+
+      for (const report of visibleReports) {
+        const card = document.createElement("article");
+        card.className = "report-card";
+
+        const top = document.createElement("div");
+        top.className = "report-top";
+
+        const titleArea = document.createElement("div");
+
+        const title = document.createElement("h3");
+        title.textContent = report.item_name;
+
+        const reportId = document.createElement("p");
+        reportId.className = "report-id";
+        reportId.textContent = report.report_id;
+
+        titleArea.append(title, reportId);
+
+        const status = document.createElement("span");
+        status.className = `status ${report.status || "open"}`;
+        status.textContent = report.status || "open";
+
+        top.append(titleArea, status);
+
+        const meta = document.createElement("div");
+        meta.className = "meta";
+        meta.append(
+          createPill(`Reported by: ${report.reported_by_name}`),
+          createPill(`Reported: ${formatDate(report.reported_on)}`),
+          createPill(`Checkout: ${report.checkout_id}`),
+        );
+
+        const description = document.createElement("div");
+        description.className = "description";
+        description.textContent = report.description;
+
+        card.append(top, meta, description);
+
+        if (report.manager_note) {
+          const managerNote = document.createElement("div");
+          managerNote.className = "manager-note";
+          managerNote.textContent = `Manager note: ${report.manager_note}`;
+          card.appendChild(managerNote);
+        }
+
+        const actions = document.createElement("div");
+        actions.className = "actions";
+
+        if (report.status === "open") {
+          const reviewButton = document.createElement("button");
+          reviewButton.className = "action-button review";
+          reviewButton.textContent = "Mark reviewed";
+          reviewButton.addEventListener("click", () => {
+            reviewReport(report, "reviewed", card);
+          });
+          actions.appendChild(reviewButton);
+        }
+
+        const resolveButton = document.createElement("button");
+        resolveButton.className = "action-button resolved";
+        resolveButton.textContent = "Resolve report";
+        resolveButton.addEventListener("click", () => {
+          reviewReport(report, "resolved", card);
+        });
+        actions.appendChild(resolveButton);
+
+        const repairButton = document.createElement("button");
+        repairButton.className = "action-button repair";
+        repairButton.textContent = "Mark under repair";
+        repairButton.addEventListener("click", () => {
+          updateCondition(report, "under_repair", card);
+        });
+        actions.appendChild(repairButton);
+
+        const damagedButton = document.createElement("button");
+        damagedButton.className = "action-button damaged";
+        damagedButton.textContent = "Mark damaged";
+        damagedButton.addEventListener("click", () => {
+          updateCondition(report, "damaged", card);
+        });
+        actions.appendChild(damagedButton);
+
+        card.appendChild(actions);
+        reportList.appendChild(card);
+      }
+    }
+
+    async function loadReports() {
+      const response = await fetch("/api/manager/damage-reports", {
+        credentials: "same-origin",
+      });
+
+      if (response.status === 401) {
+        window.location.assign("/api/auth/login");
+        return;
+      }
+
+      if (response.status === 403) {
+        window.location.assign("/");
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error(await readError(response));
+      }
+
+      const payload = await response.json();
+
+      reports = Array.isArray(payload.reports)
+        ? payload.reports
+        : [];
+
+      updateSummary(payload.summary || {});
+      renderReports();
+    }
+
+    function showError(message) {
+      reportList.innerHTML = "";
+
+      const error = document.createElement("div");
+      error.className = "error";
+      error.textContent = message;
+
+      reportList.appendChild(error);
+    }
+
+    statusFilter.addEventListener("change", renderReports);
+
+    logoutBtn.addEventListener("click", async () => {
+      logoutBtn.disabled = true;
+
+      try {
+        await fetch("/api/auth/logout", {
+          method: "POST",
+          credentials: "same-origin",
+        });
+      } finally {
+        window.location.assign("/");
+      }
+    });
+
+    async function initialize() {
+      try {
+        const authenticated = await loadSession();
+
+        if (!authenticated) {
+          return;
+        }
+
+        await loadReports();
+      } catch (error) {
+        showError(
+          `Could not load damage reports: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        );
+      }
+    }
+
+    initialize();
+  </script>
+</body>
+</html>

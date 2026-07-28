@@ -58,6 +58,15 @@ class ChatRequest(BaseModel):
 class ManagerDecisionRequest(BaseModel):
     note: str = ""
 
+class DamageReviewRequest(BaseModel):
+    status: str
+    note: str = ""
+
+
+class InventoryConditionRequest(BaseModel):
+    status: str
+    note: str = ""
+
 def require_manager(request: Request) -> dict:
     user = auth.current_user(request)
 
@@ -105,6 +114,34 @@ def inventory_page():
     """Authenticated inventory browser page."""
     return FileResponse(Path(__file__).parent / "inventory.html")
 
+@app.get("/my-checkouts")
+def my_checkouts_page(request: Request):
+    user = auth.current_user(request)
+
+    if user.get("role") == "lab_manager":
+        return RedirectResponse("/manager/requests", status_code=303)
+
+    return FileResponse(Path(__file__).parent / "my_checkouts.html")
+
+@app.get("/checkout-history")
+def checkout_history_page(request: Request):
+    user = auth.current_user(request)
+
+    if user.get("role") == "lab_manager":
+        return RedirectResponse("/manager/requests", status_code=303)
+
+    return FileResponse(Path(__file__).parent / "checkout_history.html")
+
+@app.get("/manager")
+def manager_dashboard_page(request: Request):
+    require_manager(request)
+    return FileResponse(Path(__file__).parent / "manager_dashboard.html")
+
+@app.get("/manager/damage-reports")
+def manager_damage_reports_page(request: Request):
+    require_manager(request)
+    return FileResponse(Path(__file__).parent / "manager_damage_reports.html")
+
 @app.get("/api/inventory")
 def inventory(request: Request):
     """Return inventory records appropriate for the signed-in user."""
@@ -115,16 +152,6 @@ def inventory(request: Request):
             include_manager_details=user.get("role") == "lab_manager",
         )
     }
-
-@app.get("/my-checkouts")
-def my_checkouts_page(request: Request):
-    user = auth.current_user(request)
-
-    if user.get("role") == "lab_manager":
-        return RedirectResponse("/manager/requests", status_code=303)
-
-    return FileResponse(Path(__file__).parent / "my_checkouts.html")
-
 
 @app.get("/api/my-checkouts")
 def my_checkouts(request: Request):
@@ -148,15 +175,6 @@ def my_checkouts(request: Request):
         },
     }
 
-@app.get("/checkout-history")
-def checkout_history_page(request: Request):
-    user = auth.current_user(request)
-
-    if user.get("role") == "lab_manager":
-        return RedirectResponse("/manager/requests", status_code=303)
-
-    return FileResponse(Path(__file__).parent / "checkout_history.html")
-
 @app.get("/api/checkout-history")
 def checkout_history(request: Request):
     user = auth.current_user(request)
@@ -177,6 +195,37 @@ def checkout_history(request: Request):
             "damage_reports": sum(
                 item.get("damage_report_count", 0)
                 for item in items
+            ),
+        },
+    }
+
+@app.get("/api/manager/summary")
+def manager_summary(request: Request):
+    require_manager(request)
+
+    return store.manager_operations_summary()
+
+@app.get("/api/manager/damage-reports")
+def manager_damage_reports(request: Request):
+    require_manager(request)
+
+    reports = store.get_damage_reports()
+
+    return {
+        "reports": reports,
+        "summary": {
+            "total": len(reports),
+            "open": sum(
+                report.get("status", "open") == "open"
+                for report in reports
+            ),
+            "reviewed": sum(
+                report.get("status") == "reviewed"
+                for report in reports
+            ),
+            "resolved": sum(
+                report.get("status") == "resolved"
+                for report in reports
             ),
         },
     }
@@ -276,6 +325,36 @@ def google_callback(request: Request):
 def logout(request: Request):
     request.session.clear()
     return {"ok": True}
+
+@app.post("/api/manager/damage-reports/{report_id}/review")
+def review_damage_report(
+    report_id: str,
+    body: DamageReviewRequest,
+    request: Request,
+):
+    manager = require_manager(request)
+
+    return store.update_damage_report(
+        report_id=report_id,
+        manager_id=manager["id"],
+        new_status=body.status,
+        manager_note=body.note,
+    )
+
+@app.post("/api/manager/inventory/{item_id}/condition")
+def update_inventory_condition(
+    item_id: str,
+    body: InventoryConditionRequest,
+    request: Request,
+):
+    manager = require_manager(request)
+
+    return store.set_inventory_status(
+        item_id=item_id,
+        new_status=body.status,
+        manager_id=manager["id"],
+        note=body.note,
+    )
 
 
 @app.get("/api/me")

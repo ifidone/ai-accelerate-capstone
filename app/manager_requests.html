@@ -131,6 +131,7 @@
       border-radius: 999px;
       background: rgba(255, 255, 255, 0.58);
       box-shadow: var(--shadow-sm);
+      flex-wrap: nowrap;
     }
 
     .nav-link {
@@ -140,6 +141,9 @@
       font-size: 0.78rem;
       font-weight: 650;
       text-decoration: none;
+      white-space: nowrap;
+      padding: 0.38rem 0.55rem;
+      font-size: 0.74rem;
     }
 
     .nav-link:hover {
@@ -444,10 +448,31 @@
         </div>
 
         <nav class="main-nav" aria-label="Primary navigation">
-          <a class="nav-link" href="/">Chat</a>
-          <a class="nav-link" href="/inventory">Inventory</a>
-          <a class="nav-link active" href="/manager/requests">Request queue</a>
-        </nav>
+            <a class="nav-link" href="/">Chat</a>
+            <a class="nav-link" href="/inventory">Inventory</a>
+            <a
+              id="nav-manager-dashboard"
+              class="nav-link"
+              href="/manager"
+            >
+              Dashboard
+            </a>
+            <a
+              class="nav-link active"
+              href="/manager/requests"
+              title="Request Queue"
+              >
+              Request
+            </a>
+            <a
+              id="nav-damage-queue"
+              class="nav-link"
+              href="/manager/damage-reports"
+              title="Damage Queue"
+              >
+              Damage
+            </a>
+          </nav>
       </div>
 
       <div class="account">

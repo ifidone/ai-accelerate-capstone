@@ -174,15 +174,17 @@
     "requested_days": 2,
     "status": "returned",
     "approved_by": "u2",
-    "notes": "[Damage report d-5c7db80f on 2026-07-19] The sensor kit is 5\u00b0C off.",
+    "notes": "[Damage report d-5c7db80f on 2026-07-19] The sensor kit is 5\u00b0C off.\n[Damage report d-5c7db80f reviewed by Marcus Alvarez on 2026-07-28] Status: reviewed. l\n[Damage report d-5c7db80f reviewed by Marcus Alvarez on 2026-07-28] Status: resolved. yay",
     "damage_reports": [
       {
         "report_id": "d-5c7db80f",
         "reported_on": "2026-07-19",
         "reported_by": "u1",
         "description": "The sensor kit is 5\u00b0C off.",
-        "status": "open",
-        "manager_note": ""
+        "status": "resolved",
+        "manager_note": "yay",
+        "reviewed_by": "u2",
+        "reviewed_on": "2026-07-28"
       }
     ],
     "calendar_event_id": "gdbtnr3qcptm3rudprl6d9vtlo"

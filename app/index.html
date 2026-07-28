@@ -574,6 +574,24 @@
           >
             Request queue
           </a>
+
+          <a
+            id="nav-manager-dashboard"
+            class="nav-link"
+            href="/manager"
+            hidden
+          >
+            Dashboard
+          </a>
+
+          <a
+            id="nav-damage-queue"
+            class="nav-link"
+            href="/manager/damage-reports"
+            hidden
+          >
+            Damage queue
+          </a>
         </nav>
       </div>
 
@@ -652,6 +670,9 @@
     const navMyCheckouts = document.getElementById("nav-my-checkouts");
     const navHistory = document.getElementById("nav-history");
     const navRequestQueue = document.getElementById("nav-request-queue");
+
+    const navManagerDashboard = document.getElementById("nav-manager-dashboard");
+    const navDamageQueue = document.getElementById("nav-damage-queue");
 
     let currentUser = null;
 
@@ -829,6 +850,9 @@
       navMyCheckouts.hidden = isManager;
       navHistory.hidden = isManager;
       navRequestQueue.hidden = !isManager;
+
+      navManagerDashboard.hidden = !isManager;
+      navDamageQueue.hidden = !isManager; 
 
       return true;
     }

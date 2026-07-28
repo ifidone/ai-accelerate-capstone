@@ -44,8 +44,9 @@
     "item_id": "sensor-kit-01",
     "name": "Environmental Sensor Kit (temp/humidity/IMU)",
     "category": "sensor_kit",
-    "status": "available",
+    "status": "under_repair",
     "checked_out_by": null,
-    "checkout_limit_days": 5
+    "checkout_limit_days": 5,
+    "manager_note": "[2026-07-28 by u2] broke"
   }
 ]

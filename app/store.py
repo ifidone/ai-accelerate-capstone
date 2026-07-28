@@ -1013,3 +1013,104 @@ def my_checkout_history(user_id: str) -> list[dict]:
         ),
         reverse=True,
     )
+
+def manager_operations_summary() -> dict:
+    """Return high-level operational counts for the manager dashboard."""
+    records = load_records()
+    checkouts = load_checkouts()
+
+    # Updates past-due active records before counting.
+    overdue = overdue_items()
+
+    return {
+        "pending_requests": sum(
+            checkout["status"] == "pending"
+            for checkout in checkouts
+        ),
+        "active_checkouts": sum(
+            checkout["status"] == "active"
+            for checkout in checkouts
+        ),
+        "overdue_checkouts": len(overdue),
+        "open_damage_reports": sum(
+            report.get("status", "open") == "open"
+            for checkout in checkouts
+            for report in checkout.get("damage_reports", [])
+        ),
+        "under_repair": sum(
+            record.get("status") == "under_repair"
+            for record in records
+        ),
+        "retired": sum(
+            record.get("status") == "retired"
+            for record in records
+        ),
+    }
+
+
+def update_damage_report(
+    report_id: str,
+    manager_id: str,
+    new_status: str,
+    manager_note: str = "",
+) -> dict:
+    """Review or resolve a student damage report.
+
+    Valid report statuses:
+    - open
+    - reviewed
+    - resolved
+
+    This updates only the damage report itself. Changing inventory state to
+    damaged, under_repair, available, or retired remains a separate manager
+    operation through set_inventory_status().
+    """
+    allowed_statuses = {"open", "reviewed", "resolved"}
+
+    if new_status not in allowed_statuses:
+        return {
+            "ok": False,
+            "reason": (
+                "Damage report status must be open, reviewed, or resolved."
+            ),
+        }
+
+    checkouts = load_checkouts()
+
+    for checkout in checkouts:
+        for report in checkout.get("damage_reports", []):
+            if report.get("report_id") != report_id:
+                continue
+
+            report["status"] = new_status
+            report["manager_note"] = manager_note.strip()
+            report["reviewed_by"] = manager_id
+            report["reviewed_on"] = date.today().isoformat()
+
+            note = (
+                f"[Damage report {report_id} reviewed by "
+                f"{user_display_name(manager_id)} on "
+                f"{report['reviewed_on']}] "
+                f"Status: {new_status}. "
+                f"{manager_note.strip()}"
+            ).strip()
+
+            checkout["notes"] = (
+                f"{checkout.get('notes', '').strip()}\n{note}"
+            ).strip()
+
+            save_checkouts(checkouts)
+
+            return {
+                "ok": True,
+                "report_id": report_id,
+                "checkout_id": checkout["checkout_id"],
+                "item_id": checkout["item_id"],
+                "status": new_status,
+                "manager_note": manager_note.strip(),
+            }
+
+    return {
+        "ok": False,
+        "reason": f"No damage report found with ID {report_id}.",
+    }
