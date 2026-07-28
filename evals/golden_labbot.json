@@ -362,6 +362,73 @@
           "status": "overdue"
         }
       }
-    }
+    },
+    {
+        "id": "manager-list-damage-reports",
+        "category": "manager_damage_queue",
+        "setup": "damage_sensor",
+        "user_id": "u2",
+        "message": "Show all damage reports.",
+        "expected_intent": "manager_action",
+        "expected_result": {
+          "ok": true,
+          "action": "list_damage_reports"
+        },
+        "state": {}
+      },
+      {
+        "id": "manager-repair-active-equipment-blocked",
+        "category": "manager_damage_queue",
+        "setup": "one_active_sensor",
+        "user_id": "u2",
+        "message": "Mark sensor-kit-01 under repair.",
+        "expected_intent": "manager_action",
+        "expected_result": {
+          "ok": false,
+          "action": "mark_under_repair"
+        },
+        "state": {
+          "record": {
+            "item_id": "sensor-kit-01",
+            "status": "checked_out"
+          }
+        }
+      },
+      {
+        "id": "manager-restore-repaired-equipment",
+        "category": "manager_damage_queue",
+        "setup": "sensor_under_repair",
+        "user_id": "u2",
+        "message": "Restore sensor-kit-01 to available.",
+        "expected_intent": "manager_action",
+        "expected_result": {
+          "ok": true,
+          "action": "restore_item"
+        },
+        "state": {
+          "record": {
+            "item_id": "sensor-kit-01",
+            "status": "available"
+          }
+        }
+      },
+      {
+        "id": "manager-list-pending-queue",
+        "category": "manager_request_queue",
+        "setup": "pending_sensor",
+        "user_id": "u2",
+        "message": "What requests are waiting for approval?",
+        "expected_intent": "manager_action",
+        "expected_result": {
+          "ok": true,
+          "action": "list_pending"
+        },
+        "state": {
+          "checkout": {
+            "checkout_id": "c-pending-sensor",
+            "status": "pending"
+          }
+        }
+      }
 ]
   

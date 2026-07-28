@@ -100,6 +100,29 @@ A faithful response must:
 
 8. Do not invent policy information beyond RESULT or EXPECTED_BEHAVIOR.
 
+9. For manager request-queue actions, distinguish:
+   - pending request
+   - approved/active checkout
+   - denied request
+   - inventory unavailable rejection
+
+10. For damage reports, distinguish:
+   - report submitted by student
+   - report open
+   - report reviewed
+   - report resolved
+   A report being reviewed or resolved does NOT automatically mean that the
+   equipment is repaired, available, damaged, retired, or under repair.
+
+11. For inventory-condition actions, never claim an item was marked
+   under_repair, damaged, retired, or available unless RESULT confirms the
+   update succeeded. If RESULT says the item is actively checked out and the
+   update was rejected, clearly preserve that distinction.
+
+12. For manager dashboard counts, do not invent pending-request, overdue,
+   damage-report, under-repair, or retired-item counts not present in RESULT.
+Also add these examples to your score anchors:
+
 ## Score anchors: faithfulness from 1 to 5
 
 5 = Fully faithful.
@@ -129,6 +152,14 @@ A faithful response must:
     Contradicts the core RESULT outcome, claims an unauthorized action
     happened, invents a checkout, return, or approval, or materially
     misrepresents system state.
+
+Examples of score 1:
+- RESULT says inventory status update failed because equipment is checked out;
+  reply says the item is now under repair.
+- RESULT says a damage report is reviewed; reply says the equipment has been
+  repaired and returned to available inventory.
+- RESULT says there are zero pending requests; reply says three requests are
+  waiting for approval.
 
 ## Required output
 
@@ -1048,27 +1079,33 @@ def main() -> None:
             f"Golden dataset was not found: {CASES_PATH}"
         )
 
+    # Main golden dataset: normal end-to-end LabBot cases only.
     dataset = json.loads(CASES_PATH.read_text())
 
-    # golden_labbot.json remains a plain list of real agent test cases.
     if not isinstance(dataset, list):
         raise ValueError(
-            "golden_labbot.json must be a JSON list of normal agent cases."
+            "golden_labbot.json must be a JSON list of normal "
+            "end-to-end agent evaluation cases."
         )
 
     cases = dataset
 
-    # Separate intentionally bad replies that test judge sensitivity.
+    # Judge calibration dataset: intentionally bad fixed replies.
+    # This is optional so deterministic evaluations can still run if the
+    # calibration file has not been created yet.
     judge_calibration_cases = (
         json.loads(CALIBRATION_PATH.read_text())
         if CALIBRATION_PATH.exists()
         else []
     )
-    original_integrations = install_external_mocks()    
+
+    # Mock Calendar, Gmail, and policy retrieval while the real graph,
+    # store rules, and response generation are evaluated.
+    original_integrations = install_external_mocks()
 
     try:
-        # Deterministic tests run first. They are authoritative for intent,
-        # authorization, result fields, and JSON state mutation.
+        # Deterministic evaluation is authoritative for routing, role checks,
+        # result data, and inventory/checkout state changes.
         results = [
             evaluate_case(case, use_judge=False)
             for case in cases
@@ -1079,42 +1116,77 @@ def main() -> None:
     judge_results = []
     judge_average = 0.0
     judge_by_category = {}
+    calibration_results = []
 
     if args.judge:
-        calibration_results = run_judge_calibration_cases(
-            judge_calibration_cases
+        # Judge only the final natural-language response against the
+        # deterministic result. This does not rerun or mutate the agent.
+        judge_results, judge_average, judge_by_category = (
+            run_faithfulness_judge(results)
         )
 
-        calibration_passed = sum(
-            result["passed"]
-            for result in calibration_results
-        )
+        # Attach each verdict to its normal end-to-end case before printing
+        # or writing reports.
+        judgments_by_id = {
+            judgment["id"]: judgment
+            for judgment in judge_results
+        }
 
-        print(
-            "\nJudge calibration: "
-            f"{calibration_passed}/{len(calibration_results)} cases passed"
-        )
-
-        for result in calibration_results:
-            verdict = "PASS" if result["passed"] else "FAIL"
-
-            print(
-                f"- {verdict}: {result['id']} "
-                f"(score {result['actual_score']}, "
-                f"expected <= {result['expected_score_max']})"
+        for result in results:
+            result["faithfulness_judge"] = judgments_by_id.get(
+                result["id"]
             )
 
-            if not result["passed"]:
-                print(f"  Reason: {result['reasoning']}")
-    
+        # Validate the judge using intentionally unfaithful fixed responses.
+        # These are separate from real LabBot golden cases.
+        if judge_calibration_cases:
+            calibration_results = run_judge_calibration_cases(
+                judge_calibration_cases
+            )
+
+            calibration_passed = sum(
+                item["passed"]
+                for item in calibration_results
+            )
+
+            print(
+                "\nJudge calibration: "
+                f"{calibration_passed}/{len(calibration_results)} "
+                "cases passed"
+            )
+
+            for item in calibration_results:
+                verdict = "PASS" if item["passed"] else "FAIL"
+
+                print(
+                    f"- {verdict}: {item['id']} "
+                    f"(score {item['actual_score']}, "
+                    f"expected <= {item['expected_score_max']})"
+                )
+
+                if not item["passed"]:
+                    print(f"  Reason: {item['reasoning']}")
+        else:
+            print(
+                "\nJudge calibration skipped: "
+                f"no file found at {CALIBRATION_PATH}"
+            )
+
     print_summary(results, include_judge=args.judge)
 
     if args.judge:
-        print(f"\nResponse faithfulness average: {judge_average:.2f} / 5.0")
+        print(
+            "\nResponse faithfulness average: "
+            f"{judge_average:.2f} / 5.0"
+        )
+
         print("Response faithfulness by category:")
 
-        for category, score in sorted(judge_by_category.items()):
-            print(f"  {category}: {score:.2f} / 5.0")
+        if judge_by_category:
+            for category, score in sorted(judge_by_category.items()):
+                print(f"  {category}: {score:.2f} / 5.0")
+        else:
+            print("  No valid normal-case judge scores were recorded.")
 
     json_path, csv_path = write_reports(results)
 

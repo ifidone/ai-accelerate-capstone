@@ -91,9 +91,12 @@ def classify_node(state: AgentState) -> AgentState:
     # personal-status request.
     manager_phrases = (
         "pending request",
+        "pending requests",
         "pending checkout",
+        "pending checkouts",
         "approve ",
         "deny ",
+        "reject ",
         "outstanding equipment",
         "outstanding checkout",
         "all outstanding",
@@ -103,10 +106,17 @@ def classify_node(state: AgentState) -> AgentState:
         "list overdue",
         "nudge ",
         "damage report",
+        "damage reports",
         "under repair",
         "mark damaged",
         "restore item",
         "retire item",
+        "waiting for approval",
+        "waiting for my approval",
+        "requests need approval",
+        "requests are waiting",
+        "what requests are waiting",
+        "which requests are waiting",
     )
 
     if (
@@ -494,7 +504,7 @@ def manager_node(state: AgentState) -> AgentState:
     checkout_id = parsed.get("checkout_id")
     item_query = str(parsed.get("item") or "").strip()
     note = str(parsed.get("note") or "").strip()
-    
+
     if not checkout_id:
         checkout_match = re.search(
             r"\bc-[a-zA-Z0-9_-]+\b",
@@ -505,6 +515,26 @@ def manager_node(state: AgentState) -> AgentState:
             checkout_id = checkout_match.group(0)
 
     message_lower = state["message"].lower()
+
+    # Deterministic interpretation for clear request-queue commands.
+    if any(
+        phrase in message_lower
+        for phrase in (
+            "show pending requests",
+            "list pending requests",
+            "pending request",
+            "pending requests",
+            "pending checkout",
+            "pending checkouts",
+            "waiting for approval",
+            "waiting for my approval",
+            "requests need approval",
+            "requests are waiting",
+            "what requests are waiting",
+            "which requests are waiting",
+        )
+    ):
+        action = "list_pending"
 
     if any(
         phrase in message_lower

@@ -156,5 +156,161 @@
       "bad_reply": "The overdue printer belongs to u3 and was approved by u2.",
       "expected_score_max": 3,
       "why_bad": "The reply exposes internal IDs even though display names are available."
-    }
+    },
+    {
+        "id": "judge-calibration-queue-approval-calendar-partial-failure",
+        "category": "manager_request_queue",
+        "message": "Approve c-pending-sensor.",
+        "expected_intent": "manager_action",
+        "expected_result": {
+          "ok": true,
+          "action": "approve",
+          "decision": "approve"
+        },
+        "actual_result": {
+          "ok": true,
+          "action": "approve",
+          "decision": "approve",
+          "checkout": {
+            "item_name": "Environmental Sensor Kit",
+            "student_name": "Irene Fidone",
+            "status": "active",
+            "due_date": "2026-07-31"
+          },
+          "calendar": {
+            "ok": false,
+            "targets": [
+              {
+                "target": "student calendar",
+                "ok": false,
+                "reason": "The student's Google Calendar is not connected."
+              },
+              {
+                "target": "LabBot debug calendar",
+                "ok": true,
+                "event_id": "debug-c-pending-sensor"
+              }
+            ]
+          },
+          "email": {
+            "ok": true,
+            "sent_to": [
+              "ifidone@andrew.cmu.edu"
+            ]
+          }
+        },
+        "bad_reply": "The request could not be approved because Irene's Google Calendar is not connected.",
+        "expected_score_max": 2,
+        "why_bad": "The request was approved and became active; only one secondary Calendar target failed."
+      },
+      {
+        "id": "judge-calibration-queue-denial-called-approval",
+        "category": "manager_request_queue",
+        "message": "Reject c-pending-sensor.",
+        "expected_intent": "manager_action",
+        "expected_result": {
+          "ok": true,
+          "action": "deny",
+          "decision": "deny"
+        },
+        "actual_result": {
+          "ok": true,
+          "action": "deny",
+          "decision": "deny",
+          "checkout": {
+            "item_name": "Environmental Sensor Kit",
+            "student_name": "Irene Fidone",
+            "status": "denied"
+          }
+        },
+        "bad_reply": "The request was approved and the sensor kit is now checked out to Irene.",
+        "expected_score_max": 1,
+        "why_bad": "The request was denied, but the reply claims approval and an active checkout."
+      },
+      {
+        "id": "judge-calibration-damage-review-called-repair",
+        "category": "damage_queue",
+        "message": "Mark damage report d-sensor-temp as reviewed.",
+        "expected_intent": "manager_action",
+        "expected_result": {
+          "ok": true,
+          "status": "reviewed"
+        },
+        "actual_result": {
+          "ok": true,
+          "report_id": "d-sensor-temp",
+          "checkout_id": "c-active-sensor",
+          "item_id": "sensor-kit-01",
+          "status": "reviewed",
+          "manager_note": "Manager reviewed the temperature reading issue."
+        },
+        "bad_reply": "The sensor kit has been repaired and is available for students again.",
+        "expected_score_max": 1,
+        "why_bad": "Reviewing a damage report does not repair the equipment or change its inventory availability."
+      },
+      {
+        "id": "judge-calibration-active-item-repair-rejected",
+        "category": "damage_queue",
+        "message": "Mark sensor-kit-01 under repair.",
+        "expected_intent": "manager_action",
+        "expected_result": {
+          "ok": false
+        },
+        "actual_result": {
+          "ok": false,
+          "reason": "Environmental Sensor Kit is actively checked out and cannot be marked 'under_repair' until it is returned."
+        },
+        "bad_reply": "The Environmental Sensor Kit is now under repair and cannot be checked out.",
+        "expected_score_max": 1,
+        "why_bad": "The inventory update was rejected because the item is still actively checked out."
+      },
+      {
+        "id": "judge-calibration-under-repair-called-available",
+        "category": "damage_queue",
+        "message": "Mark sensor-kit-01 under repair.",
+        "expected_intent": "manager_action",
+        "expected_result": {
+          "ok": true,
+          "new_status": "under_repair"
+        },
+        "actual_result": {
+          "ok": true,
+          "new_status": "under_repair",
+          "item": {
+            "item_id": "sensor-kit-01",
+            "name": "Environmental Sensor Kit",
+            "status": "under_repair"
+          }
+        },
+        "bad_reply": "The Environmental Sensor Kit is available for checkout now.",
+        "expected_score_max": 1,
+        "why_bad": "The item was marked under repair, not available."
+      },
+      {
+        "id": "judge-calibration-dashboard-counts-invented",
+        "category": "manager_dashboard",
+        "message": "Show the manager operations dashboard.",
+        "expected_intent": "manager_action",
+        "expected_result": {
+          "pending_requests": 0,
+          "active_checkouts": 2,
+          "overdue_checkouts": 1,
+          "open_damage_reports": 1,
+          "under_repair": 0,
+          "retired": 0
+        },
+        "actual_result": {
+          "pending_requests": 0,
+          "active_checkouts": 2,
+          "overdue_checkouts": 1,
+          "open_damage_reports": 1,
+          "under_repair": 0,
+          "retired": 0
+        },
+        "bad_reply": "There are three pending requests, four overdue checkouts, and two items currently under repair.",
+        "expected_score_max": 1,
+        "why_bad": "The reply invents dashboard counts that contradict the authoritative result."
+      }
   ]
+
+  
