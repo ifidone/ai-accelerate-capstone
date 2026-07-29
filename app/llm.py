@@ -2,6 +2,8 @@
 
 from . import config
 
+class ContentFilteredError(Exception):
+    """Raised when Azure OpenAI blocks content before model generation."""
 
 def client():
     """Return an LLM client. Swap this out if you use a different provider."""
@@ -19,18 +21,51 @@ def client():
     )
 
 
-def complete(system: str, user: str, temperature: float = 0.3, max_tokens: int | None = None) -> str:
-    """One-shot chat completion helper: system + single user turn -> text."""
+def complete(
+    system: str,
+    user: str,
+    temperature: float = 0.3,
+    max_tokens: int | None = None,
+) -> str:
+    """One-shot chat completion helper.
+
+    Raises ContentFilteredError when Azure blocks a prompt due to content
+    safety policy. The graph catches that error and returns a safe user-facing
+    response rather than crashing the FastAPI request.
+    """
+    from openai import BadRequestError
+
     kwargs = {}
+
     if max_tokens is not None:
         kwargs["max_tokens"] = max_tokens
-    resp = client().chat.completions.create(
-        model=config.AZURE_CHAT_DEPLOYMENT,
-        temperature=temperature,
-        messages=[
-            {"role": "system", "content": system},
-            {"role": "user", "content": user},
-        ],
-        **kwargs,
-    )
-    return resp.choices[0].message.content or ""
+
+    try:
+        response = client().chat.completions.create(
+            model=config.AZURE_CHAT_DEPLOYMENT,
+            temperature=temperature,
+            messages=[
+                {"role": "system", "content": system},
+                {"role": "user", "content": user},
+            ],
+            **kwargs,
+        )
+
+        return response.choices[0].message.content or ""
+
+    except BadRequestError as error:
+        # Azure returns a BadRequestError with a content_filter code when a
+        # jailbreak or other safety policy is triggered.
+        body = getattr(error, "body", {}) or {}
+        error_data = body.get("error", {}) if isinstance(body, dict) else {}
+
+        if (
+            error_data.get("code") == "content_filter"
+            or "content management policy" in str(error).lower()
+            or "jailbreak" in str(error).lower()
+        ):
+            raise ContentFilteredError(
+                "The request was blocked by the provider safety filter."
+            ) from error
+
+        raise

@@ -13,7 +13,7 @@ from typing import Optional, TypedDict
 
 from langgraph.graph import END, START, StateGraph
 
-from . import calendar_client, checkout_actions, gmail_client, llm, rag, store
+from . import calendar_client, checkout_actions, gmail_client, llm, rag, store, output_guard
 
 
 INTENTS = [
@@ -712,6 +712,25 @@ def chat_node(state: AgentState) -> AgentState:
     return state
 
 
+def finalize_user_reply(
+    state: AgentState,
+    reply: str,
+) -> AgentState:
+    """Apply final deterministic output filtering before UI delivery."""
+    guard_result = output_guard.filter_output(reply)
+
+    state["reply"] = guard_result.reply
+
+    # This is useful in the temporary Details panel and in audit logging.
+    # It does not expose the original unsafe content.
+    if guard_result.reason:
+        state["output_guard"] = {
+            "allowed": guard_result.allowed,
+            "reason": guard_result.reason,
+        }
+
+    return state
+
 # ---------------------------------------------------------------------------
 # User-facing response generation
 # ---------------------------------------------------------------------------
@@ -741,13 +760,13 @@ def respond_node(state: AgentState) -> AgentState:
             f"plainly. The current user is {who}."
         )
 
-        state["reply"] = llm.complete(
+        reply = llm.complete(
             system,
             state["message"],
             temperature=0.2,
         )
 
-        return state
+        return finalize_user_reply(state, reply)
 
     if intent == "chat":
         system = (
@@ -758,13 +777,13 @@ def respond_node(state: AgentState) -> AgentState:
             "overdue equipment, damage, and inventory."
         )
 
-        state["reply"] = llm.complete(
+        reply = llm.complete(
             system,
             state["message"],
             temperature=0.4,
         )
 
-        return state
+        return finalize_user_reply(state, reply)
 
     system = (
         "You are LabBot. Write a brief, friendly response using ONLY facts in "
@@ -795,13 +814,13 @@ def respond_node(state: AgentState) -> AgentState:
         f"RESULT: {json.dumps(result)}"
     )
 
-    state["reply"] = llm.complete(
+    reply = llm.complete(
         system,
         state["message"],
         temperature=0.2,
     )
 
-    return state
+    return finalize_user_reply(state, reply)
 
 
 # ---------------------------------------------------------------------------
@@ -846,17 +865,40 @@ def run(
     user: dict | None,
     history: list[dict] | None = None,
 ) -> dict:
-    """Run one authenticated LabBot interaction."""
-    final_state = _GRAPH.invoke(
-        {
-            "message": message,
-            "user": user,
-            "history": history or [],
-        }
-    )
+    """Run one authenticated LabBot interaction safely.
 
-    return {
-        "reply": final_state.get("reply", ""),
-        "intent": final_state.get("intent", ""),
-        "result": final_state.get("result", {}),
-    }
+    If Azure blocks a jailbreak-like prompt, return a safe refusal without
+    executing an action node or exposing the provider error to the user.
+    """
+    try:
+        final_state = _GRAPH.invoke(
+            {
+                "message": message,
+                "user": user,
+                "history": history or [],
+            }
+        )
+
+        return {
+            "reply": final_state.get("reply", ""),
+            "intent": final_state.get("intent", ""),
+            "result": final_state.get("result", {}),
+            "output_guard": final_state.get("output_guard"),
+        }
+
+    except llm.ContentFilteredError:
+        return {
+            "reply": (
+                "I can’t help with that request. LabBot can assist with "
+                "equipment availability, checkout requests, returns, "
+                "checkout status, policy questions, and approved manager tasks."
+            ),
+            "intent": "safety_blocked",
+            "result": {
+                "ok": False,
+                "reason": (
+                    "The request was blocked by the safety filter before "
+                    "LabBot performed any action."
+                ),
+            },
+        }

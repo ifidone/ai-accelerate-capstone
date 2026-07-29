@@ -212,9 +212,9 @@
     "student_id": "u1",
     "checkout_date": "2026-07-23",
     "due_date": "2026-07-26",
-    "return_date": null,
+    "return_date": "2026-07-29",
     "requested_days": 3,
-    "status": "active",
+    "status": "returned",
     "approved_by": "u2",
     "notes": "[Manager approval note] blah",
     "damage_reports": [],
@@ -234,6 +234,49 @@
     "status": "denied",
     "approved_by": "u2",
     "notes": "[Manager denial note] no",
+    "damage_reports": [],
+    "calendar_event_ids": {
+      "student_event_id": null,
+      "debug_event_id": null
+    }
+  },
+  {
+    "checkout_id": "c-fd8a6bf1",
+    "item_id": "esp32-01",
+    "student_id": "u1",
+    "checkout_date": "2026-07-29",
+    "due_date": null,
+    "return_date": null,
+    "requested_days": 3,
+    "status": "pending",
+    "approved_by": null,
+    "notes": "[Damage report d-fd3b7701 on 2026-07-29] under repair",
+    "damage_reports": [
+      {
+        "report_id": "d-fd3b7701",
+        "reported_on": "2026-07-29",
+        "reported_by": "u1",
+        "description": "under repair",
+        "status": "open",
+        "manager_note": ""
+      }
+    ],
+    "calendar_event_ids": {
+      "student_event_id": null,
+      "debug_event_id": null
+    }
+  },
+  {
+    "checkout_id": "c-e4a1e395",
+    "item_id": "esp32-01",
+    "student_id": "u1",
+    "checkout_date": "2026-07-29",
+    "due_date": null,
+    "return_date": null,
+    "requested_days": 3,
+    "status": "pending",
+    "approved_by": null,
+    "notes": "",
     "damage_reports": [],
     "calendar_event_ids": {
       "student_event_id": null,
