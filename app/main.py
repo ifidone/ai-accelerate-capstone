@@ -24,7 +24,6 @@ if not config.SESSION_SECRET:
         "SESSION_SECRET is missing. Add it to your .env before starting LabBot."
     )
 
-# OAuthlib blocks HTTP by default. This is safe only for localhost development.
 if config.OAUTHLIB_INSECURE_TRANSPORT:
     os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
 
@@ -309,8 +308,6 @@ def google_callback(request: Request):
 
     user = auth.resolve_google_user(profile)
 
-    # This token belongs to the signed-in LabBot user and enables events in
-    # their own primary Google Calendar.
     user_google_tokens.save(user["id"], flow.credentials)
 
     request.session["user"] = user
@@ -430,8 +427,6 @@ def chat(req: ChatRequest, request: Request):
     """Run a chat request as the Google-authenticated LabBot user."""
     user = auth.current_user(request)
 
-    # A bounded history is supplied to the graph for follow-up resolution,
-    # while the UI can display a longer saved history.
     history = chat_history.get_recent_messages(
         user_id=user["id"],
         limit=20,

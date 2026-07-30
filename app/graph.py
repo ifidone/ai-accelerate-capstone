@@ -86,9 +86,6 @@ def classify_node(state: AgentState) -> AgentState:
     message = state["message"].lower().strip()
     user = state.get("user")
 
-    # Explicit manager wording routes deterministically. This prevents
-    # "show pending requests" from being misclassified as the manager's own
-    # personal-status request.
     manager_phrases = (
         "pending request",
         "pending requests",
@@ -237,8 +234,6 @@ def request_checkout_node(state: AgentState) -> AgentState:
         }
         return state
 
-    # Creates a pending request. The Calendar event and confirmation email
-    # happen only after a lab manager approves it.
     state["result"] = store.request_checkout(
         user["id"],
         record["item_id"],
@@ -327,14 +322,11 @@ def report_return_node(state: AgentState) -> AgentState:
         result["item_name"] = record["name"]
 
         if result.get("ok"):
-            # Remove both the student's own Calendar event and the LabBot
-            # debug Calendar event independently.
             result["calendar"] = calendar_client.delete_checkout_events(
                 student_user_id=user["id"],
                 event_ids=result.get("calendar_event_ids"),
             )
 
-            # The LabBot automation account sends the operational email.
             result["email"] = gmail_client.send_return_confirmation(
                 user=user,
                 item_name=record["name"],
@@ -721,8 +713,6 @@ def finalize_user_reply(
 
     state["reply"] = guard_result.reply
 
-    # This is useful in the temporary Details panel and in audit logging.
-    # It does not expose the original unsafe content.
     if guard_result.reason:
         state["output_guard"] = {
             "allowed": guard_result.allowed,

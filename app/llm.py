@@ -54,8 +54,6 @@ def complete(
         return response.choices[0].message.content or ""
 
     except BadRequestError as error:
-        # Azure returns a BadRequestError with a content_filter code when a
-        # jailbreak or other safety policy is triggered.
         body = getattr(error, "body", {}) or {}
         error_data = body.get("error", {}) if isinstance(body, dict) else {}
 
