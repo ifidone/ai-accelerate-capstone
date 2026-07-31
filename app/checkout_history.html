@@ -7,16 +7,24 @@
 
   <style>
     :root {
-      --bg: #fbf7f3;
-      --surface: rgba(255, 255, 255, 0.76);
+      --bg: #f7faf7;
+      --surface: rgba(255, 255, 255, 0.78);
       --surface-solid: #ffffff;
-      --border: rgba(20, 20, 40, 0.08);
-      --text: #1a1524;
-      --text-muted: #6b6880;
-      --accent: #7c5cff;
-      --accent-grad: linear-gradient(135deg, #7c5cff 0%, #ff6ea8 100%);
-      --shadow-sm: 0 1px 2px rgba(20, 20, 40, 0.04), 0 1px 3px rgba(20, 20, 40, 0.06);
-      --shadow-lg: 0 24px 60px -24px rgba(80, 60, 180, 0.28);
+      --border: rgba(16, 55, 43, 0.10);
+
+      --text: #16352c;
+      --text-muted: #697b74;
+
+      --accent: #16876c;
+      --accent-dark: #0f6954;
+      --accent-light: #63cfa4;
+      --accent-grad: linear-gradient(135deg, #16876c 0%, #63cfa4 100%);
+
+      --shadow-sm:
+        0 1px 2px rgba(16, 55, 43, 0.05),
+        0 1px 3px rgba(16, 55, 43, 0.08);
+
+      --shadow-lg: 0 24px 60px -24px rgba(16, 95, 72, 0.24);
       --radius-lg: 24px;
     }
 
@@ -54,7 +62,7 @@
       left: -120px;
       width: 480px;
       height: 480px;
-      background: radial-gradient(circle, #ffb4c8 0%, transparent 70%);
+      background: radial-gradient(circle, #bfeeda 0%, transparent 70%);
     }
 
     body::after {
@@ -62,7 +70,7 @@
       bottom: -180px;
       width: 540px;
       height: 540px;
-      background: radial-gradient(circle, #b6a5ff 0%, transparent 70%);
+      background: radial-gradient(circle, #b8e7d6 0%, transparent 70%);
     }
 
     .shell {
@@ -458,6 +466,140 @@
         text-align: left;
       }
     }
+  
+    /* LabBot unified green UI overrides */
+    :root {
+      --bg: #f7faf7;
+      --surface: rgba(255, 255, 255, 0.78);
+      --surface-solid: #ffffff;
+      --border: rgba(16, 55, 43, 0.10);
+
+      --text: #16352c;
+      --text-muted: #697b74;
+
+      --accent: #16876c;
+      --accent-dark: #0f6954;
+      --accent-light: #63cfa4;
+      --accent-grad: linear-gradient(135deg, #16876c 0%, #63cfa4 100%);
+
+      --green: #16876c;
+      --green-bg: rgba(99, 207, 164, 0.20);
+      --red: #c92e4b;
+      --red-bg: rgba(244, 50, 86, 0.10);
+      --yellow: #9c6700;
+      --yellow-bg: rgba(244, 176, 0, 0.18);
+      --purple: #7040ae;
+      --purple-bg: rgba(162, 89, 234, 0.14);
+
+      --shadow-sm:
+        0 1px 2px rgba(16, 55, 43, 0.05),
+        0 1px 3px rgba(16, 55, 43, 0.08);
+
+      --shadow-lg:
+        0 24px 60px -24px rgba(16, 95, 72, 0.24);
+    }
+
+    body::before {
+      background: radial-gradient(
+        circle,
+        #bfeeda 0%,
+        transparent 70%
+      ) !important;
+    }
+
+    body::after {
+      background: radial-gradient(
+        circle,
+        #b8e7d6 0%,
+        transparent 70%
+      ) !important;
+    }
+
+    .mark,
+    .brand .mark {
+      box-shadow: 0 6px 20px -6px rgba(22, 135, 108, 0.42) !important;
+    }
+
+    .nav-link:hover {
+      background: rgba(22, 135, 108, 0.10) !important;
+      color: var(--accent-dark) !important;
+    }
+
+    .role-badge,
+    .badge {
+      background: rgba(22, 135, 108, 0.12) !important;
+      color: var(--accent-dark) !important;
+    }
+
+    .field:focus,
+    form:focus-within {
+      border-color: rgba(22, 135, 108, 0.55) !important;
+      box-shadow: 0 0 0 4px rgba(22, 135, 108, 0.14) !important;
+    }
+
+    .bubble.user {
+      box-shadow: 0 8px 20px -10px rgba(22, 135, 108, 0.42) !important;
+    }
+
+    .avatar.user {
+      background: linear-gradient(
+        135deg,
+        #16876c,
+        #63cfa4
+      ) !important;
+    }
+
+    #send,
+    button[type="submit"] {
+      box-shadow: 0 6px 16px -6px rgba(22, 135, 108, 0.48) !important;
+    }
+
+    .status.available,
+    .status.active,
+    .status.returned {
+      background: rgba(99, 207, 164, 0.20) !important;
+      color: #0f6954 !important;
+    }
+
+    .status.cancelled {
+      background: rgba(119, 119, 119, 0.14);
+      color: #5d5d5d;
+    }
+
+    .cancel-request {
+      margin-top: 0.85rem;
+      padding: 0.5rem 0.72rem;
+      border: 1px solid rgba(244, 50, 86, 0.24);
+      border-radius: 10px;
+      background: rgba(244, 50, 86, 0.07);
+      color: #c92e4b;
+      font: inherit;
+      font-size: 0.76rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .cancel-request:hover {
+      background: rgba(244, 50, 86, 0.14);
+    }
+
+    .cancel-request:disabled {
+      cursor: not-allowed;
+      opacity: 0.55;
+    }
+
+    @media (min-width: 561px) {
+      .main-nav {
+        flex-wrap: nowrap !important;
+      }
+
+      .main-nav .nav-link {
+        padding: 0.38rem 0.55rem !important;
+        font-size: 0.74rem !important;
+        white-space: nowrap !important;
+      }
+    }
+
   </style>
 </head>
 
@@ -535,6 +677,7 @@
           <option value="all">All statuses</option>
           <option value="returned">Returned</option>
           <option value="denied">Denied</option>
+          <option value="cancelled">Cancelled</option>
         </select>
 
         <select id="category-filter" class="field" aria-label="Filter by category">
@@ -825,6 +968,9 @@
         if (item.status === "returned") {
           dateTitle.textContent = formatDate(item.return_date);
           dateSubtitle.textContent = "Return recorded";
+        } else if (item.status === "cancelled") {
+          dateTitle.textContent = formatDate(item.cancelled_on);
+          dateSubtitle.textContent = "Request cancelled";
         } else {
           dateTitle.textContent = formatDate(item.checkout_date);
           dateSubtitle.textContent = "Request decision";

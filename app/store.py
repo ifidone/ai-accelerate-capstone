@@ -264,6 +264,7 @@ def _checkout_summary(checkout: dict) -> dict:
         "checkout_date": checkout.get("checkout_date"),
         "due_date": checkout.get("due_date"),
         "return_date": checkout.get("return_date"),
+        "cancelled_on": checkout.get("cancelled_on"),
         "requested_days": checkout.get("requested_days"),
         "status": checkout.get("status"),
         "notes": checkout.get("notes", ""),
@@ -276,6 +277,68 @@ def _checkout_summary(checkout: dict) -> dict:
 # ---------------------------------------------------------------------------
 # Student actions
 # ---------------------------------------------------------------------------
+def cancel_pending_request(
+    user_id: str,
+    checkout_id: str,
+) -> dict:
+    """Cancel one student's own pending checkout request.
+
+    Cancellation preserves the record for audit/history purposes. Because
+    pending requests do not reserve inventory, no inventory record needs
+    to change.
+    """
+    checkouts = load_checkouts()
+
+    checkout = next(
+        (
+            item
+            for item in checkouts
+            if item["checkout_id"] == checkout_id
+        ),
+        None,
+    )
+
+    if checkout is None:
+        return {
+            "ok": False,
+            "reason": f"No checkout request found with ID {checkout_id}.",
+        }
+
+    if checkout["student_id"] != user_id:
+        return {
+            "ok": False,
+            "reason": "You can cancel only your own checkout requests.",
+        }
+
+    if checkout["status"] != "pending":
+        return {
+            "ok": False,
+            "reason": (
+                "Only pending checkout requests can be cancelled. "
+                f"This request is currently {checkout['status']}."
+            ),
+        }
+
+    checkout["status"] = "cancelled"
+    checkout["cancelled_on"] = date.today().isoformat()
+
+    note = (
+        f"[Cancelled by student on {checkout['cancelled_on']}]"
+    )
+
+    checkout["notes"] = (
+        f"{checkout.get('notes', '').strip()}\n{note}"
+    ).strip()
+
+    save_checkouts(checkouts)
+
+    return {
+        "ok": True,
+        "checkout_id": checkout_id,
+        "item_id": checkout["item_id"],
+        "status": "cancelled",
+    }
+
 def request_checkout(user_id: str, item_id: str, days: int) -> dict:
     """Create a PENDING request.
 
@@ -969,7 +1032,7 @@ def my_checkout_history(user_id: str) -> list[dict]:
     This powers the Checkout History page. It deliberately excludes current
     pending, active, and overdue records.
     """
-    history_statuses = ("returned", "denied")
+    history_statuses = ("returned", "denied", "cancelled")
     items = []
 
     for checkout in load_checkouts():

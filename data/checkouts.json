@@ -248,8 +248,8 @@
     "due_date": null,
     "return_date": null,
     "requested_days": 3,
-    "status": "pending",
-    "approved_by": null,
+    "status": "denied",
+    "approved_by": "u2",
     "notes": "[Damage report d-fd3b7701 on 2026-07-29] under repair",
     "damage_reports": [
       {
@@ -274,13 +274,84 @@
     "due_date": null,
     "return_date": null,
     "requested_days": 3,
-    "status": "pending",
-    "approved_by": null,
+    "status": "denied",
+    "approved_by": "u2",
     "notes": "",
     "damage_reports": [],
     "calendar_event_ids": {
       "student_event_id": null,
       "debug_event_id": null
     }
+  },
+  {
+    "checkout_id": "c-04b5ddd1",
+    "item_id": "esp32-01",
+    "student_id": "u1",
+    "checkout_date": "2026-07-30",
+    "due_date": "2026-08-02",
+    "return_date": null,
+    "requested_days": 3,
+    "status": "active",
+    "approved_by": "u2",
+    "notes": "",
+    "damage_reports": [],
+    "calendar_event_ids": {
+      "student_event_id": null,
+      "debug_event_id": null
+    }
+  },
+  {
+    "checkout_id": "c-20ea8a04",
+    "item_id": "esp32-02",
+    "student_id": "u1",
+    "checkout_date": "2026-07-30",
+    "due_date": null,
+    "return_date": null,
+    "requested_days": 3,
+    "status": "cancelled",
+    "approved_by": null,
+    "notes": "[Cancelled by student on 2026-07-31]",
+    "damage_reports": [],
+    "calendar_event_ids": {
+      "student_event_id": null,
+      "debug_event_id": null
+    },
+    "cancelled_on": "2026-07-31"
+  },
+  {
+    "checkout_id": "c-8d5a1bbf",
+    "item_id": "esp32-02",
+    "student_id": "u1",
+    "checkout_date": "2026-07-31",
+    "due_date": null,
+    "return_date": null,
+    "requested_days": 3,
+    "status": "cancelled",
+    "approved_by": null,
+    "notes": "[Cancelled by student on 2026-07-31]",
+    "damage_reports": [],
+    "calendar_event_ids": {
+      "student_event_id": null,
+      "debug_event_id": null
+    },
+    "cancelled_on": "2026-07-31"
+  },
+  {
+    "checkout_id": "c-939ca659",
+    "item_id": "esp32-02",
+    "student_id": "u1",
+    "checkout_date": "2026-07-31",
+    "due_date": null,
+    "return_date": null,
+    "requested_days": 3,
+    "status": "cancelled",
+    "approved_by": null,
+    "notes": "[Cancelled by student on 2026-07-31]",
+    "damage_reports": [],
+    "calendar_event_ids": {
+      "student_event_id": null,
+      "debug_event_id": null
+    },
+    "cancelled_on": "2026-07-31"
   }
 ]

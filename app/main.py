@@ -141,6 +141,24 @@ def manager_damage_reports_page(request: Request):
     require_manager(request)
     return FileResponse(Path(__file__).parent / "manager_damage_reports.html")
 
+@app.delete("/api/my-checkouts/{checkout_id}")
+def cancel_my_checkout_request(
+    checkout_id: str,
+    request: Request,
+):
+    user = auth.current_user(request)
+
+    if user.get("role") == "lab_manager":
+        raise HTTPException(
+            status_code=403,
+            detail="Lab managers use the request queue instead.",
+        )
+
+    return store.cancel_pending_request(
+        user_id=user["id"],
+        checkout_id=checkout_id,
+    )
+
 @app.get("/api/inventory")
 def inventory(request: Request):
     """Return inventory records appropriate for the signed-in user."""
