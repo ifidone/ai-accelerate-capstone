@@ -12,8 +12,8 @@
     "item_id": "esp32-02",
     "name": "ESP32 Dev Kit",
     "category": "microcontroller",
-    "status": "available",
-    "checked_out_by": null,
+    "status": "checked_out",
+    "checked_out_by": "u1",
     "checkout_limit_days": 3
   },
   {

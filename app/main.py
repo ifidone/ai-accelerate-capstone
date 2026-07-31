@@ -105,8 +105,12 @@ def google_flow(
 
 
 @app.get("/")
-def index():
-    return FileResponse(Path(__file__).parent / "index.html")
+def index(request: Request):
+    """Show the welcome page before login and chat after login."""
+    if request.session.get("user"):
+        return FileResponse(Path(__file__).parent / "index.html")
+
+    return FileResponse(Path(__file__).parent / "welcome.html")
 
 @app.get("/inventory")
 def inventory_page():

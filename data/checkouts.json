@@ -289,9 +289,9 @@
     "student_id": "u1",
     "checkout_date": "2026-07-30",
     "due_date": "2026-08-02",
-    "return_date": null,
+    "return_date": "2026-07-31",
     "requested_days": 3,
-    "status": "active",
+    "status": "returned",
     "approved_by": "u2",
     "notes": "",
     "damage_reports": [],
@@ -353,5 +353,39 @@
       "debug_event_id": null
     },
     "cancelled_on": "2026-07-31"
+  },
+  {
+    "checkout_id": "c-45acf33a",
+    "item_id": "esp32-02",
+    "student_id": "u1",
+    "checkout_date": "2026-07-31",
+    "due_date": "2026-08-03",
+    "return_date": null,
+    "requested_days": 3,
+    "status": "active",
+    "approved_by": "u2",
+    "notes": "",
+    "damage_reports": [],
+    "calendar_event_ids": {
+      "student_event_id": null,
+      "debug_event_id": null
+    }
+  },
+  {
+    "checkout_id": "c-1ccce246",
+    "item_id": "esp32-01",
+    "student_id": "u1",
+    "checkout_date": "2026-07-31",
+    "due_date": "2026-08-03",
+    "return_date": null,
+    "requested_days": 3,
+    "status": "active",
+    "approved_by": "u2",
+    "notes": "",
+    "damage_reports": [],
+    "calendar_event_ids": {
+      "student_event_id": "vqf8ap8g9n1bjku9jn0ec4puq0",
+      "debug_event_id": "2uur9kiggvt5ai225s0r763e14"
+    }
   }
 ]
