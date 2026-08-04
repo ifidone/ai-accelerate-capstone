@@ -1,14 +1,8 @@
 """Google Calendar integration for LabBot.
 
-A successful approved checkout creates two independent due-date events:
-
-1. Student calendar
-   Uses the signed-in student's saved Google OAuth token and writes to that
-   person's primary Google Calendar.
-
-2. LabBot debug calendar
-   Uses the separately authorized bot/debug account token and writes to the
-   configured debug calendar.
+A successful approved checkout creates one due-date event on the signed-in
+student's own primary Google Calendar, using that student's saved Google
+OAuth token. No copy is written anywhere else.
 
 Calendar failures never roll back a successful equipment checkout or return.
 """
@@ -219,7 +213,7 @@ def create_checkout_events(
     due_date: str,
     checkout_id: str,
 ) -> dict:
-    """Create the student and debug calendar events independently."""
+    """Create the student's own due-date event."""
     targets = []
 
     try:
@@ -245,29 +239,6 @@ def create_checkout_events(
             }
         )
 
-    try:
-        result = _create_event(
-            service=_bot_service(),
-            calendar_id=config.GOOGLE_DEBUG_CALENDAR_ID,
-            item_name=item_name,
-            due_date=due_date,
-            checkout_id=checkout_id,
-        )
-        targets.append(
-            {
-                "target": "LabBot debug calendar",
-                **result,
-            }
-        )
-    except RuntimeError as error:
-        targets.append(
-            {
-                "target": "LabBot debug calendar",
-                "ok": False,
-                "reason": str(error),
-            }
-        )
-
     event_ids = {
         "student_event_id": next(
             (
@@ -278,15 +249,7 @@ def create_checkout_events(
             ),
             None,
         ),
-        "debug_event_id": next(
-            (
-                target["event_id"]
-                for target in targets
-                if target["target"] == "LabBot debug calendar"
-                and target.get("ok")
-            ),
-            None,
-        ),
+        "debug_event_id": None,
     }
 
     failures = [
@@ -307,7 +270,7 @@ def delete_checkout_events(
     student_user_id: str,
     event_ids: dict | None,
 ) -> dict:
-    """Delete student and debug events independently after a return."""
+    """Delete the student's due-date event after a return."""
     event_ids = event_ids or {}
     targets = []
 
@@ -327,27 +290,6 @@ def delete_checkout_events(
         targets.append(
             {
                 "target": "student calendar",
-                "ok": False,
-                "reason": str(error),
-            }
-        )
-
-    try:
-        result = _delete_event(
-            service=_bot_service(),
-            calendar_id=config.GOOGLE_DEBUG_CALENDAR_ID,
-            event_id=event_ids.get("debug_event_id"),
-        )
-        targets.append(
-            {
-                "target": "LabBot debug calendar",
-                **result,
-            }
-        )
-    except RuntimeError as error:
-        targets.append(
-            {
-                "target": "LabBot debug calendar",
                 "ok": False,
                 "reason": str(error),
             }

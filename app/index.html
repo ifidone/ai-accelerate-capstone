@@ -814,6 +814,8 @@
     const navManagerDashboard = document.getElementById("nav-manager-dashboard");
     const navDamageQueue = document.getElementById("nav-damage-queue");
 
+    const SHOW_DEBUG_DETAILS = false;
+
     let currentUser = null;
 
     function initials(name) {
@@ -1058,7 +1060,7 @@
         const data = await response.json();
         typingRow.remove();
 
-        const debug = data.intent
+        const debug = SHOW_DEBUG_DETAILS && data.intent
           ? `intent: ${data.intent}\n\n${JSON.stringify(data.result, null, 2)}`
           : null;
 

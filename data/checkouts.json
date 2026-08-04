@@ -360,9 +360,9 @@
     "student_id": "u1",
     "checkout_date": "2026-07-31",
     "due_date": "2026-08-03",
-    "return_date": null,
+    "return_date": "2026-08-03",
     "requested_days": 3,
-    "status": "active",
+    "status": "returned",
     "approved_by": "u2",
     "notes": "",
     "damage_reports": [],
@@ -377,6 +377,57 @@
     "student_id": "u1",
     "checkout_date": "2026-07-31",
     "due_date": "2026-08-03",
+    "return_date": "2026-08-03",
+    "requested_days": 3,
+    "status": "returned",
+    "approved_by": "u2",
+    "notes": "",
+    "damage_reports": [],
+    "calendar_event_ids": {
+      "student_event_id": "vqf8ap8g9n1bjku9jn0ec4puq0",
+      "debug_event_id": "2uur9kiggvt5ai225s0r763e14"
+    }
+  },
+  {
+    "checkout_id": "c-ac2d13ca",
+    "item_id": "esp32-01",
+    "student_id": "u1",
+    "checkout_date": "2026-08-03",
+    "due_date": "2026-08-06",
+    "return_date": "2026-08-03",
+    "requested_days": 3,
+    "status": "returned",
+    "approved_by": "u2",
+    "notes": "[Manager approval note] approved",
+    "damage_reports": [],
+    "calendar_event_ids": {
+      "student_event_id": "apon0nh6af40bfqnjv7fdjimro",
+      "debug_event_id": "socja66tqro1h4ftve5fetkj0k"
+    }
+  },
+  {
+    "checkout_id": "c-0a4e87d3",
+    "item_id": "scope-01",
+    "student_id": "u1",
+    "checkout_date": "2026-08-04",
+    "due_date": "2026-08-06",
+    "return_date": null,
+    "requested_days": 2,
+    "status": "active",
+    "approved_by": "u2",
+    "notes": "[Manager approval note] yay",
+    "damage_reports": [],
+    "calendar_event_ids": {
+      "student_event_id": "fn4srlc4cqsu55ppmmtrd1ljtc",
+      "debug_event_id": "ti6ub6jurph23h85grglti95mo"
+    }
+  },
+  {
+    "checkout_id": "c-780396c5",
+    "item_id": "esp32-01",
+    "student_id": "u1",
+    "checkout_date": "2026-08-04",
+    "due_date": "2026-08-07",
     "return_date": null,
     "requested_days": 3,
     "status": "active",
@@ -384,8 +435,8 @@
     "notes": "",
     "damage_reports": [],
     "calendar_event_ids": {
-      "student_event_id": "vqf8ap8g9n1bjku9jn0ec4puq0",
-      "debug_event_id": "2uur9kiggvt5ai225s0r763e14"
+      "student_event_id": "58omh2pk53nsh2oghgonsodp20",
+      "debug_event_id": null
     }
   }
 ]
