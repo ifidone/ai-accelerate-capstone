@@ -133,7 +133,7 @@ def send_checkout_confirmation(user: dict | None, item_name: str, due_date: str,
     """Send immediately after a successful checkout."""
     to = _student_email(user)
     name = user["name"] if user else "Student"
-    subject = f"LabBot: {item_name} checked out — due {due_date}"
+    subject = f"Supply Sage: {item_name} checked out — due {due_date}"
     body = (
         f"Hi {name},\n\n"
         f"Your checkout was confirmed:\n\n"
@@ -143,7 +143,7 @@ def send_checkout_confirmation(user: dict | None, item_name: str, due_date: str,
         f"Please return it by end of day on {due_date}. If you need more "
         f"time, request a renewal before the due date (renewals are not "
         f"available once an item is overdue).\n\n"
-        f"— LabBot"
+        f"— Supply Sage"
     )
     return _send(to, subject, body)
 
@@ -152,7 +152,7 @@ def send_return_confirmation(user: dict | None, item_name: str, return_date: str
     """Send immediately after a successful return."""
     to = _student_email(user)
     name = user["name"] if user else "Student"
-    subject = f"LabBot: {item_name} returned"
+    subject = f"Supply Sage: {item_name} returned"
     body = (
         f"Hi {name},\n\n"
         f"Your return was recorded:\n\n"
@@ -160,7 +160,7 @@ def send_return_confirmation(user: dict | None, item_name: str, return_date: str
         f"  Returned on: {return_date}\n\n"
         f"Thanks for returning it on time. The item is now available "
         f"for other students.\n\n"
-        f"— LabBot"
+        f"— Supply Sage"
     )
     return _send(to, subject, body)
 
@@ -169,17 +169,17 @@ def send_due_date_reminder(user: dict | None, item_name: str, due_date: str, che
     """Send the day before the due date. Called by app/scheduler.py."""
     to = _student_email(user)
     name = user["name"] if user else "Student"
-    subject = f"LabBot reminder: {item_name} due tomorrow ({due_date})"
+    subject = f"Supply Sage reminder: {item_name} due tomorrow ({due_date})"
     body = (
         f"Hi {name},\n\n"
         f"This is a reminder that the following item is due back tomorrow:\n\n"
         f"  Item:        {item_name}\n"
         f"  Checkout ID: {checkout_id}\n"
         f"  Due date:    {due_date}\n\n"
-        f"If you need more time, message LabBot to request a renewal "
+        f"If you need more time, message Supply Sage to request a renewal "
         f"before it becomes overdue. If the item is already returned, "
         f"you can ignore this message.\n\n"
-        f"— LabBot"
+        f"— Supply Sage"
     )
     return _send(to, subject, body)
 
@@ -193,17 +193,17 @@ def send_overdue_nudge(
     to = _student_email(user)
     name = user["name"] if user else "Student"
 
-    subject = f"LabBot overdue notice: {item_name} was due {due_date}"
+    subject = f"Supply Sage overdue notice: {item_name} was due {due_date}"
 
     body = (
         f"Hi {name},\n\n"
-        f"This is a LabBot reminder that the following equipment is overdue:\n\n"
+        f"This is a Supply Sage reminder that the following equipment is overdue:\n\n"
         f"  Item:        {item_name}\n"
         f"  Checkout ID: {checkout_id}\n"
         f"  Due date:    {due_date}\n\n"
         f"Please return the item as soon as possible, or contact the lab "
         f"manager if there is an issue.\n\n"
-        f"— LabBot"
+        f"— Supply Sage"
     )
 
     return _send(to, subject, body)

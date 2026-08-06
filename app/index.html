@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>LabBot</title>
+  <title>Supply Sage</title>
 
   <style>
     :root {
@@ -304,6 +304,50 @@
       font-weight: 700;
     }
 
+    .suggestions {
+      max-width: 480px;
+      margin: 1.1rem auto 0;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 0.55rem;
+    }
+
+    .suggestion-chip {
+      display: inline-flex;
+      width: auto;
+      height: auto;
+      flex: 0 0 auto;
+      padding: 0.6rem 1rem;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--surface-solid);
+      color: var(--accent-dark);
+      font: inherit;
+      font-size: 0.85rem;
+      font-weight: 600;
+      white-space: nowrap;
+      cursor: pointer;
+      box-shadow: var(--shadow-sm);
+      transition: transform 120ms ease, background 120ms ease, border-color 120ms ease;
+    }
+
+    .suggestion-chip:hover {
+      background: rgba(22, 135, 108, 0.08);
+      border-color: var(--accent-light);
+      transform: translateY(-1px);
+    }
+
+    .suggestion-chip:active {
+      transform: translateY(0);
+    }
+
+    .suggestion-chip:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
     .row {
       display: flex;
       align-items: flex-end;
@@ -537,7 +581,7 @@
       }
     }
   
-    /* LabBot unified green UI overrides */
+    /* Supply Sage unified green UI overrides */
     :root {
       --bg: #f7faf7;
       --surface: rgba(255, 255, 255, 0.78);
@@ -678,10 +722,10 @@
     <header>
       <div class="brand-area">
         <div class="brand">
-          <div class="mark">L</div>
+          <div class="mark">S</div>
       
           <div>
-            <h1>LabBot</h1>
+            <h1>Supply Sage</h1>
             <span class="tag">Lab equipment, checked out and tracked.</span>
           </div>
         </div>
@@ -752,7 +796,7 @@
             id="logout"
             class="account-button"
             type="button"
-            title="Log out of LabBot"
+            title="Log out of Supply Sage"
           >
             Log out
           </button>
@@ -764,7 +808,7 @@
       <div id="log" role="log" aria-live="polite">
         <div class="empty">
           <strong>Loading your history…</strong>
-          Your saved LabBot messages will appear here.
+          Your saved Supply Sage messages will appear here.
         </div>
       </div>
 
@@ -772,7 +816,7 @@
         <form id="form">
           <input
             id="input"
-            placeholder="Ask LabBot about equipment…"
+            placeholder="Ask Supply Sage about equipment…"
             autocomplete="off"
             disabled
           />
@@ -849,14 +893,61 @@
 
     function clearEmpty() {
       const empty = log.querySelector(".empty");
+      const suggestions = log.querySelector(".suggestions");
 
       if (empty) {
         empty.remove();
       }
+
+      if (suggestions) {
+        suggestions.remove();
+      }
+    }
+
+    const SUGGESTED_PROMPTS = {
+      student: [
+        "What lab equipment is available right now?",
+        "I'd like to check out an ESP32 dev kit.",
+        "What's the equipment checkout policy?",
+        "What do I currently have checked out?",
+      ],
+      lab_manager: [
+        "What checkout requests are pending my approval?",
+        "Show all outstanding equipment.",
+        "Are there any overdue items?",
+        "What's the equipment checkout policy?",
+      ],
+    };
+
+    function showSuggestions() {
+      const prompts = SUGGESTED_PROMPTS[currentUser?.role] || SUGGESTED_PROMPTS.student;
+
+      const container = document.createElement("div");
+      container.className = "suggestions";
+
+      for (const prompt of prompts) {
+        const chip = document.createElement("button");
+        chip.type = "button";
+        chip.className = "suggestion-chip";
+        chip.textContent = prompt;
+        chip.disabled = input.disabled;
+
+        chip.addEventListener("click", () => {
+          if (input.disabled) {
+            return;
+          }
+
+          send(prompt);
+        });
+
+        container.appendChild(chip);
+      }
+
+      log.appendChild(container);
     }
 
     function showEmptyHistory(
-      message = "Start a new LabBot conversation whenever you are ready.",
+      message = "Start a new Supply Sage conversation whenever you are ready.",
     ) {
       log.innerHTML = "";
 
@@ -871,6 +962,8 @@
 
       empty.append(title, body);
       log.appendChild(empty);
+
+      showSuggestions();
     }
 
     function add(role, text, extra = null) {
@@ -883,7 +976,7 @@
       avatar.className = `avatar ${role}`;
 
       if (role === "bot") {
-        avatar.textContent = "L";
+        avatar.textContent = "S";
       } else {
         avatar.textContent = initials(currentUser?.name);
         avatar.style.cssText = userAvatarStyle();
@@ -928,7 +1021,7 @@
 
       const avatar = document.createElement("div");
       avatar.className = "avatar bot";
-      avatar.textContent = "L";
+      avatar.textContent = "S";
 
       const bubble = document.createElement("div");
       bubble.className = "bubble bot";
@@ -952,6 +1045,10 @@
     function setChatEnabled(enabled) {
       input.disabled = !enabled;
       sendBtn.disabled = !enabled;
+
+      for (const chip of log.querySelectorAll(".suggestion-chip")) {
+        chip.disabled = !enabled;
+      }
     }
 
     async function readError(response) {
@@ -1095,7 +1192,7 @@
 
     clearHistoryBtn.addEventListener("click", async () => {
       const confirmed = window.confirm(
-        "Delete your saved LabBot conversation history? This cannot be undone.",
+        "Delete your saved Supply Sage conversation history? This cannot be undone.",
       );
 
       if (!confirmed) {
@@ -1166,7 +1263,7 @@
 
         add(
           "bot",
-          `Could not initialize LabBot: ${
+          `Could not initialize Supply Sage: ${
             error instanceof Error ? error.message : String(error)
           }`,
         );

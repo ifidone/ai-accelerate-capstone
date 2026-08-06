@@ -429,6 +429,73 @@
             "status": "pending"
           }
         }
+      },
+      {
+        "id": "policy-question-checkout-limits",
+        "category": "policy_question",
+        "setup": "clear",
+        "user_id": "u1",
+        "message": "How many items can I check out at once, and what happens if one is overdue?",
+        "expected_intent": "policy_question",
+        "expected_result": {
+          "ok": true
+        },
+        "state": {}
+      },
+      {
+        "id": "student-cancel-pending-request",
+        "category": "happy_path",
+        "setup": "pending_sensor",
+        "user_id": "u1",
+        "message": "Cancel my sensor kit request, I do not need it anymore.",
+        "expected_intent": "cancel_checkout_request",
+        "expected_result": {
+          "ok": true,
+          "checkout_id": "c-pending-sensor",
+          "item_id": "sensor-kit-01",
+          "status": "cancelled"
+        },
+        "state": {
+          "checkout": {
+            "checkout_id": "c-pending-sensor",
+            "status": "cancelled"
+          }
+        }
+      },
+      {
+        "id": "student-return-and-request-combo",
+        "category": "happy_path",
+        "setup": "one_active_sensor",
+        "user_id": "u1",
+        "message": "Return the sensor kit and check out an ESP32 instead.",
+        "expected_intent": "return_and_request_checkout",
+        "expected_result": {
+          "ok": true,
+          "partial_success": false,
+          "return.ok": true,
+          "return.item_name": "Environmental Sensor Kit",
+          "request.ok": true,
+          "request.item_name": "ESP32 Dev Kit",
+          "request.checkout.status": "pending"
+        },
+        "state": {
+          "record": {
+            "item_id": "sensor-kit-01",
+            "status": "available"
+          }
+        }
+      },
+      {
+        "id": "chat-off-topic-smalltalk",
+        "category": "happy_path",
+        "setup": "clear",
+        "user_id": "u1",
+        "message": "Hey, how's it going?",
+        "expected_intent": "chat",
+        "expected_result": {
+          "ok": true
+        },
+        "state": {}
       }
 ]
   

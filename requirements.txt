@@ -3,6 +3,7 @@ uvicorn[standard]
 pydantic
 python-dotenv
 openai
+anthropic
 chromadb
 langgraph
 google-auth 
@@ -11,6 +12,7 @@ google-api-python-client
 apscheduler
 mcp[cli]
 itsdangerous
+chromadb
 
 # Add more as you build — at minimum you'll likely need:
 # langgraph          — agent orchestration

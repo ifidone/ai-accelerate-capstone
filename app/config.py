@@ -28,14 +28,21 @@ AZURE_API_VERSION = os.getenv(
     "AZURE_OPENAI_API_VERSION",
     "2024-08-01-preview",
 )
-AZURE_CHAT_DEPLOYMENT = os.getenv(
-    "AZURE_OPENAI_CHAT_DEPLOYMENT",
-    "gpt-4o-mini",
-)
 AZURE_EMBED_DEPLOYMENT = os.getenv(
     "AZURE_OPENAI_EMBED_DEPLOYMENT",
     "text-embedding-3-small",
 )
+
+# ---------------------------------------------------------------------------
+# Anthropic (Claude) — chat completions
+# ---------------------------------------------------------------------------
+# All chat completions (classification, extraction, response generation) go
+# through Claude. Embeddings stay on Azure OpenAI above, since Anthropic has
+# no embeddings endpoint.
+ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
+ANTHROPIC_BASE_URL = os.getenv("ANTHROPIC_BASE_URL")
+ANTHROPIC_HAIKU_MODEL = os.getenv("ANTHROPIC_HAIKU_MODEL", "claude-haiku-4-5")
+ANTHROPIC_SONNET_MODEL = os.getenv("ANTHROPIC_SONNET_MODEL", "claude-sonnet-4-6")
 
 # ---------------------------------------------------------------------------
 # Google OAuth — browser login / LabBot personas

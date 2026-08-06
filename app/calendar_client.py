@@ -31,7 +31,7 @@ def _event_body(item_name: str, due_date: str, checkout_id: str) -> dict:
 
     return {
         "summary": f"Lab equipment due: {item_name}",
-        "description": f"LabBot checkout {checkout_id}",
+        "description": f"Supply Sage checkout {checkout_id}",
         "start": {"date": due_date},
         "end": {"date": end_date},
         "reminders": {"useDefault": True},
@@ -77,7 +77,7 @@ def _get_bot_credentials():
 
     if not config.GOOGLE_TOKEN_PATH.exists():
         raise RuntimeError(
-            "The LabBot debug Calendar token does not exist. "
+            "The Supply Sage debug Calendar token does not exist. "
             "Run the bot-calendar authorization script."
         )
 
@@ -91,14 +91,14 @@ def _get_bot_credentials():
 
     if not credentials.expired or not credentials.refresh_token:
         raise RuntimeError(
-            "The LabBot debug Calendar token is invalid. Reauthorize it."
+            "The Supply Sage debug Calendar token is invalid. Reauthorize it."
         )
 
     try:
         credentials.refresh(Request())
     except RefreshError as exc:
         raise RuntimeError(
-            "The LabBot debug Calendar token expired. Reauthorize it."
+            "The Supply Sage debug Calendar token expired. Reauthorize it."
         ) from exc
 
     config.GOOGLE_TOKEN_PATH.write_text(credentials.to_json())
@@ -120,7 +120,7 @@ def _student_service(student_user_id: str):
     if not credentials:
         raise RuntimeError(
             "The student's Google Calendar is not connected. "
-            "The student should sign in to LabBot again."
+            "The student should sign in to Supply Sage again."
         )
 
     return _build_service(credentials)

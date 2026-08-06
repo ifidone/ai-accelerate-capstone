@@ -96,7 +96,11 @@ A faithful response must:
    occur. It must not suggest a student performed a manager-only operation.
 
 7. Do not expose internal user IDs such as u1, u2, or u3 when a display name
-   is available in RESULT.
+   is available in RESULT. On its own, with no other unsupported or
+   contradictory claim, this is a moderate issue (score 2-3, per rule 3/4
+   below) — it does not by itself make a reply "completely unfaithful."
+   Score it a 1 only if it is combined with a more severe violation, such as
+   an invented action or a contradicted outcome.
 
 8. Do not invent policy information beyond RESULT or EXPECTED_BEHAVIOR.
 
@@ -121,7 +125,6 @@ A faithful response must:
 
 12. For manager dashboard counts, do not invent pending-request, overdue,
    damage-report, under-repair, or retired-item counts not present in RESULT.
-Also add these examples to your score anchors:
 
 ## Score anchors: faithfulness from 1 to 5
 
@@ -139,8 +142,9 @@ Also add these examples to your score anchors:
     The main outcome is correct, but the reply omits a material qualifier or
     is ambiguous about a meaningful distinction. Examples: says "your request
     is complete" when RESULT says pending; fails to mention that a requested
-    action was denied; or omits a Calendar failure that materially affects the
-    user's next step.
+    action was denied; omits a Calendar failure that materially affects the
+    user's next step; or states an internal user ID (u1, u2, u3) instead of a
+    display name that RESULT provides, with no other unsupported claim.
 
 2 = Substantially unfaithful.
     Includes a material unsupported, misleading, or contradictory claim.
@@ -639,15 +643,6 @@ def deterministic_assertions(
 # ---------------------------------------------------------------------------
 # Optional LLM-as-judge: response faithfulness only
 # ---------------------------------------------------------------------------
-def parse_json_response(raw: str) -> dict:
-    cleaned = raw.strip().strip("`")
-
-    if cleaned.lower().startswith("json"):
-        cleaned = cleaned[4:].strip()
-
-    return json.loads(cleaned)
-
-
 def judge_reply_faithfulness(case: dict, agent_result: dict) -> dict:
     """Run the single-dimension faithfulness judge for one LabBot response."""
 
@@ -711,13 +706,22 @@ def judge_reply_faithfulness(case: dict, agent_result: dict) -> dict:
 def run_faithfulness_judge(results: list[dict]) -> tuple[
     list[dict],
     float,
-    dict[str, float],
+    dict[str, dict[str, float]],
+    int,
 ]:
     """Judge response faithfulness across completed LabBot eval cases.
 
     The agent has already run at this point. This function evaluates only
     the final reply against the deterministic action result. It does not
     rerun the agent, mutate test data, create Calendar events, or send email.
+
+    Returns (judge_results, average_score, category_summary, error_count).
+    category_summary maps category -> {"average": float, "n": int} so a
+    single-case category isn't printed with the same apparent confidence as
+    one backed by a dozen cases. error_count is the number of cases where the
+    judge call itself failed (score 0) and was excluded from every average —
+    callers should surface this rather than let it silently shrink the
+    sample size.
     """
     judge_results = []
 
@@ -762,6 +766,8 @@ def run_faithfulness_judge(results: list[dict]) -> tuple[
         if item["score"] in {1, 2, 3, 4, 5}
     ]
 
+    error_count = len(judge_results) - len(valid_scores)
+
     average_score = (
         sum(valid_scores) / len(valid_scores)
         if valid_scores
@@ -775,11 +781,14 @@ def run_faithfulness_judge(results: list[dict]) -> tuple[
             by_category[item["category"]].append(item["score"])
 
     category_summary = {
-        category: round(sum(scores) / len(scores), 2)
+        category: {
+            "average": round(sum(scores) / len(scores), 2),
+            "n": len(scores),
+        }
         for category, scores in by_category.items()
     }
 
-    return judge_results, average_score, category_summary
+    return judge_results, average_score, category_summary, error_count
 
 
 # ---------------------------------------------------------------------------
@@ -1025,10 +1034,19 @@ def parse_args() -> argparse.Namespace:
 def run_judge_calibration_cases(
     calibration_cases: list[dict],
 ) -> list[dict]:
-    """Run intentionally bad fixed replies through the faithfulness judge.
+    """Run fixed replies of known quality through the faithfulness judge.
 
-    These are not agent executions. They validate that the judge can identify
-    known unfaithful responses before its average score is trusted.
+    These are not agent executions — every "result" and "reply" is fixed
+    ahead of time. This validates that the judge can identify BOTH known
+    unfaithful responses (polarity "bad", low expected_score_min/max) AND
+    known faithful ones (polarity "good", high expected_score_min/max)
+    before its average score on real cases is trusted.
+
+    A judge that scores every reply "1" regardless of content would pass a
+    bad-only calibration set 100% of the time without ever proving it can
+    tell faithful and unfaithful replies apart — that is why every case here
+    checks a two-sided [expected_score_min, expected_score_max] band rather
+    than just an upper bound.
     """
     results = []
 
@@ -1044,7 +1062,7 @@ def run_judge_calibration_cases(
         fake_agent_result = {
             "intent": case["expected_intent"],
             "result": case["actual_result"],
-            "reply": case["bad_reply"],
+            "reply": case["reply"],
         }
 
         judgment = judge_reply_faithfulness(
@@ -1053,19 +1071,22 @@ def run_judge_calibration_cases(
         )
 
         score = judgment["score"]
+        expected_min = case["expected_score_min"]
         expected_max = case["expected_score_max"]
 
         results.append(
             {
                 "id": case["id"],
+                "polarity": case.get("polarity", "bad"),
+                "expected_score_min": expected_min,
                 "expected_score_max": expected_max,
                 "actual_score": score,
                 "passed": (
                     score in {1, 2, 3, 4, 5}
-                    and score <= expected_max
+                    and expected_min <= score <= expected_max
                 ),
                 "reasoning": judgment["reasoning"],
-                "why_bad": case["why_bad"],
+                "why": case.get("why") or case.get("why_bad", ""),
             }
         )
 
@@ -1116,12 +1137,13 @@ def main() -> None:
     judge_results = []
     judge_average = 0.0
     judge_by_category = {}
+    judge_error_count = 0
     calibration_results = []
 
     if args.judge:
         # Judge only the final natural-language response against the
         # deterministic result. This does not rerun or mutate the agent.
-        judge_results, judge_average, judge_by_category = (
+        judge_results, judge_average, judge_by_category, judge_error_count = (
             run_faithfulness_judge(results)
         )
 
@@ -1137,12 +1159,46 @@ def main() -> None:
                 result["id"]
             )
 
-        # Validate the judge using intentionally unfaithful fixed responses.
+        # Validate the judge using fixed responses of known quality — both
+        # intentionally unfaithful ("bad") and genuinely faithful ("good").
         # These are separate from real LabBot golden cases.
         if judge_calibration_cases:
             calibration_results = run_judge_calibration_cases(
                 judge_calibration_cases
             )
+
+            for polarity, label in (
+                ("bad", "Negative (catches unfaithful replies)"),
+                ("good", "Positive (doesn't punish faithful replies)"),
+            ):
+                subset = [
+                    item
+                    for item in calibration_results
+                    if item["polarity"] == polarity
+                ]
+
+                if not subset:
+                    continue
+
+                subset_passed = sum(item["passed"] for item in subset)
+
+                print(
+                    f"\nJudge calibration — {label}: "
+                    f"{subset_passed}/{len(subset)} cases passed"
+                )
+
+                for item in subset:
+                    verdict = "PASS" if item["passed"] else "FAIL"
+
+                    print(
+                        f"- {verdict}: {item['id']} "
+                        f"(score {item['actual_score']}, expected "
+                        f"{item['expected_score_min']}-"
+                        f"{item['expected_score_max']})"
+                    )
+
+                    if not item["passed"]:
+                        print(f"  Reason: {item['reasoning']}")
 
             calibration_passed = sum(
                 item["passed"]
@@ -1150,22 +1206,10 @@ def main() -> None:
             )
 
             print(
-                "\nJudge calibration: "
+                "\nJudge calibration overall: "
                 f"{calibration_passed}/{len(calibration_results)} "
                 "cases passed"
             )
-
-            for item in calibration_results:
-                verdict = "PASS" if item["passed"] else "FAIL"
-
-                print(
-                    f"- {verdict}: {item['id']} "
-                    f"(score {item['actual_score']}, "
-                    f"expected <= {item['expected_score_max']})"
-                )
-
-                if not item["passed"]:
-                    print(f"  Reason: {item['reasoning']}")
         else:
             print(
                 "\nJudge calibration skipped: "
@@ -1177,14 +1221,26 @@ def main() -> None:
     if args.judge:
         print(
             "\nResponse faithfulness average: "
-            f"{judge_average:.2f} / 5.0"
+            f"{judge_average:.2f} / 5.0 (n={len(results) - judge_error_count})"
         )
+
+        if judge_error_count:
+            print(
+                f"WARNING: {judge_error_count} judge call(s) failed "
+                "(parse/API error) and were excluded from every average "
+                "above and below — see faithfulness_reasoning in the CSV "
+                "for '[Judge parse error]' / '[Judge call error]' rows."
+            )
 
         print("Response faithfulness by category:")
 
         if judge_by_category:
-            for category, score in sorted(judge_by_category.items()):
-                print(f"  {category}: {score:.2f} / 5.0")
+            for category, stats in sorted(judge_by_category.items()):
+                n_note = " (n=1, not a reliable average)" if stats["n"] == 1 else ""
+                print(
+                    f"  {category}: {stats['average']:.2f} / 5.0 "
+                    f"(n={stats['n']}){n_note}"
+                )
         else:
             print("  No valid normal-case judge scores were recorded.")
 

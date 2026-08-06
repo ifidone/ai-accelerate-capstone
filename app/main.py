@@ -30,7 +30,7 @@ if config.OAUTHLIB_INSECURE_TRANSPORT:
 if config.OAUTHLIB_RELAX_TOKEN_SCOPE:
     os.environ["OAUTHLIB_RELAX_TOKEN_SCOPE"] = "1"
 
-app = FastAPI(title="LabBot")
+app = FastAPI(title="Supply Sage")
 
 app.add_middleware(
     SessionMiddleware,
@@ -287,7 +287,7 @@ def google_callback(request: Request):
             status_code=400,
             detail=(
                 "OAuth session state is missing. The browser did not send "
-                "the LabBot session cookie back to the callback."
+                "the Supply Sage session cookie back to the callback."
             ),
         )
 

@@ -79,7 +79,7 @@ def filter_output(reply: str) -> OutputGuardResult:
             allowed=False,
             reply=(
                 "I couldn't safely format that response. Please try asking "
-                "your LabBot equipment question again."
+                "your Supply Sage equipment question again."
             ),
             reason="non_string_reply",
         )
@@ -102,7 +102,7 @@ def filter_output(reply: str) -> OutputGuardResult:
             allowed=False,
             reply=(
                 "I couldn't safely provide that full response. Please ask a "
-                "more specific LabBot equipment question."
+                "more specific Supply Sage equipment question."
             ),
             reason="reply_too_long",
         )
@@ -125,7 +125,7 @@ def filter_output(reply: str) -> OutputGuardResult:
                 allowed=False,
                 reply=(
                     "I couldn't safely complete that response. Please try "
-                    "again or ask a more specific LabBot question."
+                    "again or ask a more specific Supply Sage question."
                 ),
                 reason="technical_error_pattern_detected",
             )

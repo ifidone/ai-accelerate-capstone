@@ -19,7 +19,7 @@ def current_user(request: Request) -> dict:
     if not user:
         raise HTTPException(
             status_code=401,
-            detail="Sign in with Google before using LabBot.",
+            detail="Sign in with Google before using Supply Sage.",
         )
 
     return user
@@ -56,7 +56,7 @@ def resolve_google_user(profile: dict) -> dict:
     raise HTTPException(
         status_code=403,
         detail=(
-            f"The Google account {email} is not configured as a LabBot user. "
+            f"The Google account {email} is not configured as a Supply Sage user. "
             "Ask a lab manager to add it to data/users.json."
         ),
     )

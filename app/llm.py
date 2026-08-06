@@ -1,12 +1,25 @@
-"""Shared LLM client for LabBot. One place to swap providers."""
+"""Shared LLM client for LabBot. One place to swap providers.
+
+Chat completions go through Claude (Anthropic). Embeddings stay on Azure
+OpenAI via client() below — see app/rag.py — since Anthropic has no
+embeddings endpoint.
+"""
 
 from . import config
 
 class ContentFilteredError(Exception):
-    """Raised when Azure OpenAI blocks content before model generation."""
+    """Raised when the provider blocks content before model generation."""
+
+
+_TIER_MODELS = {
+    "haiku": lambda: config.ANTHROPIC_HAIKU_MODEL,
+    "sonnet": lambda: config.ANTHROPIC_SONNET_MODEL,
+}
+
 
 def client():
-    """Return an LLM client. Swap this out if you use a different provider."""
+    """Azure OpenAI client. Still used for embeddings (app/rag.py) — chat
+    completions go through anthropic_client() / complete() instead."""
     from openai import AzureOpenAI
 
     if not (config.AZURE_ENDPOINT and config.AZURE_API_KEY):
@@ -21,47 +34,74 @@ def client():
     )
 
 
+def anthropic_client():
+    """Return the Claude chat client used by complete()."""
+    from anthropic import Anthropic
+
+    if not (config.ANTHROPIC_API_KEY and config.ANTHROPIC_BASE_URL):
+        raise RuntimeError(
+            "Anthropic credentials are missing. Set ANTHROPIC_API_KEY and "
+            "ANTHROPIC_BASE_URL in .env."
+        )
+    return Anthropic(
+        api_key=config.ANTHROPIC_API_KEY,
+        base_url=config.ANTHROPIC_BASE_URL,
+    )
+
+
 def complete(
     system: str,
     user: str,
     temperature: float = 0.3,
     max_tokens: int | None = None,
+    model: str = "sonnet",
 ) -> str:
     """One-shot chat completion helper.
 
-    Raises ContentFilteredError when Azure blocks a prompt due to content
-    safety policy. The graph catches that error and returns a safe user-facing
-    response rather than crashing the FastAPI request.
+    `model` selects a tier, not a literal model name:
+      - "haiku"  — classification and structured extraction: short, low-
+                    creativity, latency/cost-sensitive.
+      - "sonnet" — user-facing generation: policy answers and action-result
+                    narration, where instruction-following and resistance to
+                    hallucinated IDs/policies/outcomes matter more than speed.
+
+    Raises ContentFilteredError when the provider blocks a prompt due to
+    content safety policy. The graph catches that error and returns a safe
+    user-facing response rather than crashing the FastAPI request.
     """
-    from openai import BadRequestError
+    from anthropic import BadRequestError
 
-    kwargs = {}
+    if model not in _TIER_MODELS:
+        raise ValueError(f"Unknown model tier '{model}'. Use 'haiku' or 'sonnet'.")
 
-    if max_tokens is not None:
-        kwargs["max_tokens"] = max_tokens
+    model_name = _TIER_MODELS[model]()
 
     try:
-        response = client().chat.completions.create(
-            model=config.AZURE_CHAT_DEPLOYMENT,
+        response = anthropic_client().messages.create(
+            model=model_name,
+            system=system,
+            messages=[{"role": "user", "content": user}],
             temperature=temperature,
-            messages=[
-                {"role": "system", "content": system},
-                {"role": "user", "content": user},
-            ],
-            **kwargs,
+            max_tokens=max_tokens or 1024,
         )
 
-        return response.choices[0].message.content or ""
+        if getattr(response, "stop_reason", None) == "refusal":
+            raise ContentFilteredError(
+                "The request was blocked by the provider safety filter."
+            )
+
+        return "".join(
+            block.text
+            for block in response.content
+            if getattr(block, "type", None) == "text"
+        )
 
     except BadRequestError as error:
-        body = getattr(error, "body", {}) or {}
-        error_data = body.get("error", {}) if isinstance(body, dict) else {}
+        error_text = str(error).lower()
 
-        if (
-            error_data.get("code") == "content_filter"
-            or "content management policy" in str(error).lower()
-            or "jailbreak" in str(error).lower()
-        ):
+        if "content" in error_text and (
+            "polic" in error_text or "filter" in error_text
+        ) or "jailbreak" in error_text:
             raise ContentFilteredError(
                 "The request was blocked by the provider safety filter."
             ) from error

@@ -35,7 +35,7 @@ def approve_checkout_request(
         result["calendar"] = {
             "ok": False,
             "reason": (
-                "The request was approved, but LabBot could not reload it "
+                "The request was approved, but Supply Sage could not reload it "
                 "for Calendar synchronization."
             ),
         }

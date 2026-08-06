@@ -28,9 +28,9 @@ from mcp.server.fastmcp import FastMCP
 from . import calendar_client, gmail_client, store
 
 mcp = FastMCP(
-    "LabBot Equipment Checkout",
+    "Supply Sage Equipment Checkout",
     instructions=(
-        "LabBot manages shared lab hardware. Use availability tools before "
+        "Supply Sage manages shared lab hardware. Use availability tools before "
         "requesting equipment. Student actions are scoped to the supplied "
         "actor_user_id. Manager-only tools require an actor whose role is "
         "lab_manager. A checkout request becomes pending until a manager "
@@ -48,8 +48,8 @@ def _require_user(actor_user_id: str) -> dict:
 
     if not user:
         raise ValueError(
-            f"Unknown LabBot user '{actor_user_id}'. "
-            "Use a valid user ID from the configured LabBot users."
+            f"Unknown Supply Sage user '{actor_user_id}'. "
+            "Use a valid user ID from the configured Supply Sage users."
         )
 
     return user
@@ -378,7 +378,7 @@ def approve_or_deny_checkout_request(
         result["calendar"] = {
             "ok": False,
             "reason": (
-                "The request was approved, but LabBot could not reload the "
+                "The request was approved, but Supply Sage could not reload the "
                 "checkout for calendar and email follow-up."
             ),
         }
@@ -411,7 +411,7 @@ def approve_or_deny_checkout_request(
             result["calendar"] = {
                 "ok": False,
                 "reason": (
-                    "The calendar event may have been created, but LabBot "
+                    "The calendar event may have been created, but Supply Sage "
                     f"could not save its event ID: {exc}"
                 ),
             }

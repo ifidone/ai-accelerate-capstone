@@ -29,7 +29,7 @@ def _token_path(user_id: str) -> Path:
     )
 
     if not safe_user_id:
-        raise ValueError("Invalid LabBot user ID.")
+        raise ValueError("Invalid Supply Sage user ID.")
 
     return config.USER_GOOGLE_TOKEN_DIR / f"{safe_user_id}.json"
 

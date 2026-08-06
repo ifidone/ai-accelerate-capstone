@@ -3,8 +3,8 @@
     "item_id": "esp32-01",
     "name": "ESP32 Dev Kit",
     "category": "microcontroller",
-    "status": "checked_out",
-    "checked_out_by": "u1",
+    "status": "available",
+    "checked_out_by": null,
     "checkout_limit_days": 3,
     "manager_note": "[2026-07-19 by u2] Status set to available."
   },
@@ -48,5 +48,125 @@
     "checked_out_by": null,
     "checkout_limit_days": 5,
     "manager_note": "[2026-07-28 by u2] broke"
+  },
+  {
+    "item_id": "sensor-kit-02",
+    "name": "9-DOF IMU Breakout Kit",
+    "category": "sensor_kit",
+    "status": "available",
+    "checked_out_by": null,
+    "checkout_limit_days": 5
+  },
+  {
+    "item_id": "arduino-01",
+    "name": "Arduino Uno R3",
+    "category": "microcontroller",
+    "status": "available",
+    "checked_out_by": null,
+    "checkout_limit_days": 3
+  },
+  {
+    "item_id": "arduino-02",
+    "name": "Arduino Uno R3",
+    "category": "microcontroller",
+    "status": "available",
+    "checked_out_by": null,
+    "checkout_limit_days": 3
+  },
+  {
+    "item_id": "rpi-01",
+    "name": "Raspberry Pi 4 Model B (4GB)",
+    "category": "single_board_computer",
+    "status": "available",
+    "checked_out_by": null,
+    "checkout_limit_days": 3
+  },
+  {
+    "item_id": "rpi-02",
+    "name": "Raspberry Pi 4 Model B (4GB)",
+    "category": "single_board_computer",
+    "status": "available",
+    "checked_out_by": null,
+    "checkout_limit_days": 3
+  },
+  {
+    "item_id": "multimeter-01",
+    "name": "Fluke 87V Digital Multimeter",
+    "category": "multimeter",
+    "status": "available",
+    "checked_out_by": null,
+    "checkout_limit_days": 2
+  },
+  {
+    "item_id": "multimeter-02",
+    "name": "Fluke 87V Digital Multimeter",
+    "category": "multimeter",
+    "status": "available",
+    "checked_out_by": null,
+    "checkout_limit_days": 2
+  },
+  {
+    "item_id": "powersupply-01",
+    "name": "Keysight E36313A Bench Power Supply",
+    "category": "power_supply",
+    "status": "available",
+    "checked_out_by": null,
+    "checkout_limit_days": 2
+  },
+  {
+    "item_id": "funcgen-01",
+    "name": "Rigol DG1022Z Function Generator",
+    "category": "function_generator",
+    "status": "available",
+    "checked_out_by": null,
+    "checkout_limit_days": 2
+  },
+  {
+    "item_id": "logicanalyzer-01",
+    "name": "Saleae Logic 8 Logic Analyzer",
+    "category": "logic_analyzer",
+    "status": "available",
+    "checked_out_by": null,
+    "checkout_limit_days": 2
+  },
+  {
+    "item_id": "breadboard-kit-01",
+    "name": "Breadboard + Jumper Wire Kit",
+    "category": "peripheral",
+    "status": "available",
+    "checked_out_by": null,
+    "checkout_limit_days": 5
+  },
+  {
+    "item_id": "breadboard-kit-02",
+    "name": "Breadboard + Jumper Wire Kit",
+    "category": "peripheral",
+    "status": "available",
+    "checked_out_by": null,
+    "checkout_limit_days": 5
+  },
+  {
+    "item_id": "soldering-01",
+    "name": "Hakko FX888D Soldering Iron Station",
+    "category": "peripheral",
+    "status": "available",
+    "checked_out_by": null,
+    "checkout_limit_days": 5
+  },
+  {
+    "item_id": "soldering-02",
+    "name": "Hakko FX888D Soldering Iron Station",
+    "category": "peripheral",
+    "status": "available",
+    "checked_out_by": null,
+    "checkout_limit_days": 5
+  },
+  {
+    "item_id": "actuator-kit-01",
+    "name": "Servo & Stepper Motor Kit",
+    "category": "actuator_kit",
+    "status": "available",
+    "checked_out_by": null,
+    "checkout_limit_days": 5
   }
 ]

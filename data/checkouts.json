@@ -428,14 +428,48 @@
     "student_id": "u1",
     "checkout_date": "2026-08-04",
     "due_date": "2026-08-07",
-    "return_date": null,
+    "return_date": "2026-08-04",
     "requested_days": 3,
-    "status": "active",
+    "status": "returned",
     "approved_by": "u2",
     "notes": "",
     "damage_reports": [],
     "calendar_event_ids": {
       "student_event_id": "58omh2pk53nsh2oghgonsodp20",
+      "debug_event_id": null
+    }
+  },
+  {
+    "checkout_id": "c-42fec8e4",
+    "item_id": "esp32-01",
+    "student_id": "u1",
+    "checkout_date": "2026-08-04",
+    "due_date": "2026-08-07",
+    "return_date": "2026-08-04",
+    "requested_days": 3,
+    "status": "returned",
+    "approved_by": "u2",
+    "notes": "",
+    "damage_reports": [],
+    "calendar_event_ids": {
+      "student_event_id": "vmrnn4v8264hac3i6dulqj5la4",
+      "debug_event_id": null
+    }
+  },
+  {
+    "checkout_id": "c-ecfe5b48",
+    "item_id": "scope-02",
+    "student_id": "u1",
+    "checkout_date": "2026-08-05",
+    "due_date": "2026-08-07",
+    "return_date": "2026-08-05",
+    "requested_days": 2,
+    "status": "returned",
+    "approved_by": "u2",
+    "notes": "[Manager approval note] yay :)",
+    "damage_reports": [],
+    "calendar_event_ids": {
+      "student_event_id": "o3und9dn9vb140kt4g62oaa8u8",
       "debug_event_id": null
     }
   }
